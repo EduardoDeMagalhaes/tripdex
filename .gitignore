@@ -10,3 +10,7 @@ logs/
 *.bak
 *.bak2
 .DS_Store
+logs/*.log
+*.db.bak_*
+static/css/
+static/js/
