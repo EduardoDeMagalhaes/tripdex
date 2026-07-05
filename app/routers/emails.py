@@ -15,6 +15,7 @@ from app.routers.email_templates import send_unregistered_reply, send_ingest_rep
 from sqlalchemy import text
 from openai import OpenAI
 import os, json, re as _re
+import urllib.parse, urllib.request
 import io as _io, uuid as _uuid
 import math as _math
 import uuid as _uuid
