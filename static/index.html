@@ -3391,6 +3391,10 @@ function pickType(btn, type) {
   document.getElementById('lblArrTime').textContent = isHotelType ? 'Check-out time' : (isGeneric ? 'End time'   : 'Arrival time');
   // Hotel / generic: hide "To" field (not meaningful — single location)
   document.getElementById('fTo').closest('.form-row').style.display = (isHotelType || isGeneric) ? 'none' : '';
+  // Ref/notes/arrival placeholders — swap away from flight-flavored examples for non-flight types
+  document.getElementById('fArrTime').placeholder = isFlightType ? '12:35' : (isHotelType ? '11:00' : (isGeneric ? '12:00' : '12:35'));
+  document.getElementById('fRef').placeholder      = isFlightType ? 'LX3K9M' : (isGeneric ? 'e.g. booking or reference number' : 'Ref / booking number');
+  document.getElementById('fNotes').placeholder    = isFlightType ? 'Seat 12A, terminal 2…' : (isGeneric ? 'Any extra details…' : 'Any extra details…');
 }
 
 function openAddSeg() {
