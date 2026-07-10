@@ -1084,8 +1084,8 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
 
 <div class="overlay" id="guardrailOverlay">
 <div class="modal" style="max-width:400px">
-  <div class="modal-title">⚠ Date outside trip range</div>
-  <p id="guardrailMsg" style="font-size:13px;color:var(--text-secondary);margin:0 0 16px"></p>
+  <div class="modal-title" id="guardrailTitle">⚠ Date outside trip range</div>
+  <p id="guardrailMsg" style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;white-space:pre-line"></p>
   <div id="guardrailActions" style="display:flex;flex-direction:column;gap:8px"></div>
   <div class="modal-footer" style="margin-top:16px">
     <button class="btn btn-ghost" onclick="closeGuardrail()">Cancel</button>
@@ -2699,16 +2699,16 @@ function renderMeta() {
 
 // ── TIMELINE ─────────────────────────────────────────────────
 const TYPE_CONFIG = {
-  flight:      {icon:'✈',  label:'Flight',      category:'transport', from:'ZRH or Zurich',    to:'HRG or Hurghada',   carrier:'Swiss LX 392',              fromLbl:'From',     toLbl:'To',               carrierLbl:'Flight'},
-  hotel:       {icon:'🏨', label:'Hotel',        category:'stay',      from:'City or address',  to:'',                  carrier:'Hotel name',                fromLbl:'Location', toLbl:'Check-out date',   carrierLbl:'Property'},
-  train:       {icon:'🚂', label:'Train',        category:'transport', from:'Bern Hbf',         to:'Zürich HB',         carrier:'SBB IC 1',                  fromLbl:'From',     toLbl:'To',               carrierLbl:'Train'},
-  taxi:        {icon:'🚕', label:'Taxi',         category:'transport', from:'Pickup address',   to:'Dropoff address',   carrier:'Driver or company name',    fromLbl:'Pickup',   toLbl:'Dropoff',          carrierLbl:'Driver / Company'},
-  car:         {icon:'🚗', label:'Car',          category:'transport', from:'Pick-up',          to:'Drop-off',          carrier:'Hertz / Avis…',             fromLbl:'Pick-up',  toLbl:'Drop-off',         carrierLbl:'Provider'},
-  activity:    {icon:'🎯', label:'Activity',     category:'generic',   from:'Location',         to:'',                  carrier:'Operator',                  fromLbl:'Location', toLbl:'',                 carrierLbl:'Activity name'},
-  event:       {icon:'📅', label:'Event',        category:'generic',   from:'Location',         to:'',                  carrier:'e.g. host, organizer',      fromLbl:'Location', toLbl:'',                 carrierLbl:'With / Reference'},
-  meeting:     {icon:'🤝', label:'Meeting',      category:'generic',   from:'Location',         to:'',                  carrier:'e.g. attendees, company',   fromLbl:'Location', toLbl:'',                 carrierLbl:'With'},
-  appointment: {icon:'🩺', label:'Appointment',  category:'generic',   from:'Location',         to:'',                  carrier:'e.g. doctor, clinic',       fromLbl:'Location', toLbl:'',                 carrierLbl:'With'},
-  other:       {icon:'📌', label:'Other',        category:'generic',   from:'',                 to:'',                  carrier:'',                          fromLbl:'Location', toLbl:'',                 carrierLbl:'Name'},
+  flight:      {icon:'✈',  label:'Flight',      category:'transport', blocking:true,  from:'ZRH or Zurich',    to:'HRG or Hurghada',   carrier:'Swiss LX 392',              fromLbl:'From',     toLbl:'To',               carrierLbl:'Flight'},
+  hotel:       {icon:'🏨', label:'Hotel',        category:'stay',      blocking:false, from:'City or address',  to:'',                  carrier:'Hotel name',                fromLbl:'Location', toLbl:'Check-out date',   carrierLbl:'Property'},
+  train:       {icon:'🚂', label:'Train',        category:'transport', blocking:true,  from:'Bern Hbf',         to:'Zürich HB',         carrier:'SBB IC 1',                  fromLbl:'From',     toLbl:'To',               carrierLbl:'Train'},
+  taxi:        {icon:'🚕', label:'Taxi',         category:'transport', blocking:true,  from:'Pickup address',   to:'Dropoff address',   carrier:'Driver or company name',    fromLbl:'Pickup',   toLbl:'Dropoff',          carrierLbl:'Driver / Company'},
+  car:         {icon:'🚗', label:'Car',          category:'transport', blocking:false, from:'Pick-up',          to:'Drop-off',          carrier:'Hertz / Avis…',             fromLbl:'Pick-up',  toLbl:'Drop-off',         carrierLbl:'Provider'},
+  activity:    {icon:'🎯', label:'Activity',     category:'generic',   blocking:true,  from:'Location',         to:'',                  carrier:'Operator',                  fromLbl:'Location', toLbl:'',                 carrierLbl:'Activity name'},
+  event:       {icon:'📅', label:'Event',        category:'generic',   blocking:true,  from:'Location',         to:'',                  carrier:'e.g. host, organizer',      fromLbl:'Location', toLbl:'',                 carrierLbl:'With / Reference'},
+  meeting:     {icon:'🤝', label:'Meeting',      category:'generic',   blocking:true,  from:'Location',         to:'',                  carrier:'e.g. attendees, company',   fromLbl:'Location', toLbl:'',                 carrierLbl:'With'},
+  appointment: {icon:'🩺', label:'Appointment',  category:'generic',   blocking:true,  from:'Location',         to:'',                  carrier:'e.g. doctor, clinic',       fromLbl:'Location', toLbl:'',                 carrierLbl:'With'},
+  other:       {icon:'📌', label:'Other',        category:'generic',   blocking:true,  from:'',                 to:'',                  carrier:'',                          fromLbl:'Location', toLbl:'',                 carrierLbl:'Name'},
 };
 let customTypes = []; // [{id,key,label,icon}] — user's saved custom segment types, loaded from API
 
@@ -2761,7 +2761,7 @@ async function saveNewType() {
 function typeCfg(type) {
   if (TYPE_CONFIG[type]) return TYPE_CONFIG[type];
   const ct = customTypes.find(c => c.key === type);
-  if (ct) return {icon: ct.icon, label: ct.label, category:'generic', from:'Location', to:'', carrier:'', fromLbl:'Location', toLbl:'', carrierLbl:'With / Reference'};
+  if (ct) return {icon: ct.icon, label: ct.label, category:'generic', blocking:true, from:'Location', to:'', carrier:'', fromLbl:'Location', toLbl:'', carrierLbl:'With / Reference'};
   return TYPE_CONFIG.other;
 }
 function typeIcon(type) { return typeCfg(type).icon; }
@@ -3302,6 +3302,13 @@ function renderSummary(draft, avNote, ttNote) {
       <span>${ttNote}</span>
     </div>` : '';
 
+  const pending = dlg.moreSegments || [];
+  const moreHtml = pending.length ? `
+    <div class="av-note" style="align-items:flex-start">
+      <span class="av-note-icon">✓</span>
+      <span>Saving this one first. I also spotted ${pending.length} more in your message — I'll offer to add ${pending.length === 1 ? 'it' : 'them'} right after:<br>${pending.map(p => `• ${p}`).join('<br>')}</span>
+    </div>` : '';
+
   area.innerHTML = `
     <div class="summary-card">
       <div class="summary-header">${icon} ${(cfg.label||draft.type||'').toUpperCase()} SUMMARY</div>
@@ -3309,6 +3316,7 @@ function renderSummary(draft, avNote, ttNote) {
     </div>
     ${avHtml}
     ${ttHtml}
+    ${moreHtml}
     <div class="summary-footer">
       <button class="btn btn-ghost btn-sm" onclick="cancelDialog()">Cancel</button>
       <button class="btn btn-ghost btn-sm" onclick="editSummary()">Edit</button>
@@ -3326,6 +3334,7 @@ function editSummary() {
 async function confirmSave() {
   const segDate = (dlg.draft && dlg.draft.departs_at) ? dlg.draft.departs_at.slice(0,10) : null;
   checkDateGuardrail(segDate, async (targetTripId) => {
+   checkOverlapGuardrail(dlg.draft.type, dlg.draft.departs_at, dlg.draft.arrives_at, null, async () => {
     const saveBtn = document.querySelector('.summary-footer .btn-accent');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
     try {
@@ -3352,6 +3361,7 @@ async function confirmSave() {
       console.error('[ERR03]', e);
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save segment ✓'; }
     }
+   });
   });
 }
 
@@ -3530,6 +3540,7 @@ async function saveSeg() {
   };
   const segDate = body.departs_at ? body.departs_at.slice(0,10) : null;
   checkDateGuardrail(segDate, async (targetTripId) => {
+   checkOverlapGuardrail(body.type, body.departs_at, body.arrives_at, editingSegId, async () => {
     if (targetTripId) body.trip_id = targetTripId;
     const url    = editingSegId ? `${API}/api/segments/${editingSegId}` : `${API}/api/segments/`;
     const method = editingSegId ? 'PATCH' : 'POST';
@@ -3538,6 +3549,7 @@ async function saveSeg() {
     closeSegModal();
     await selectTrip(currentTrip);
     toast(editingSegId ? 'Segment updated' : 'Segment added');
+   });
   });
 }
 
@@ -4442,6 +4454,7 @@ function checkDateGuardrail(segDate, onProceed) {
   );
 
   const fmt = d => d ? d.split('-').reverse().join('.') : '?';
+  document.getElementById('guardrailTitle').textContent = '⚠ Date outside trip range';
   document.getElementById('guardrailMsg').textContent =
     `The segment date (${fmt(segDate)}) is outside "${currentTrip.name}" ` +
     `(${fmt(start)} – ${fmt(end)}). How would you like to proceed?`;
@@ -4496,6 +4509,68 @@ function checkDateGuardrail(segDate, onProceed) {
   btnAnyway.style.color = 'var(--text-tertiary)';
   btnAnyway.textContent = 'Save to current trip anyway';
   btnAnyway.onclick = () => { closeGuardrail(); onProceed(null); };
+  actions.appendChild(btnAnyway);
+
+  document.getElementById('guardrailOverlay').classList.add('open');
+}
+
+// ── OVERLAP / DOUBLE-BOOKING GUARDRAIL ────────────────────────
+// Only "blocking" types (where you're physically committed somewhere — flight,
+// train, taxi, event, meeting, appointment, activity, custom types) are checked
+// against each other. "Background" bookings (hotel, car rental) never conflict —
+// you can have a meeting during a hotel stay or while a rental car is booked.
+function typeBlocking(type) {
+  const cfg = typeCfg(type);
+  return cfg.blocking !== false;
+}
+
+function segWindow(departsAt, arrivesAt) {
+  if (!departsAt) return null;
+  const start = new Date(departsAt);
+  if (isNaN(start)) return null;
+  let end = arrivesAt ? new Date(arrivesAt) : null;
+  if (!end || isNaN(end) || end <= start) end = new Date(start.getTime() + 60 * 60000); // default 1h window
+  return [start, end];
+}
+
+function findTimeConflicts(type, departsAt, arrivesAt, excludeId) {
+  if (!typeBlocking(type)) return [];
+  const win = segWindow(departsAt, arrivesAt);
+  if (!win) return [];
+  const [s1, e1] = win;
+  const segs = (currentTrip && currentTrip.segments) || [];
+  return segs.filter(s => {
+    if (excludeId && s.id === excludeId) return false;
+    if (!typeBlocking(s.type)) return false;
+    const w2 = segWindow(s.departs_at, s.arrives_at);
+    if (!w2) return false;
+    const [s2, e2] = w2;
+    return s1 < e2 && s2 < e1;
+  });
+}
+
+function checkOverlapGuardrail(type, departsAt, arrivesAt, excludeId, onProceed) {
+  const conflicts = findTimeConflicts(type, departsAt, arrivesAt, excludeId);
+  if (!conflicts.length) { onProceed(); return; }
+
+  const fmtT = iso => iso ? iso.slice(11,16) : '?';
+  const lines = conflicts.map(c => {
+    const cfg = typeCfg(c.type);
+    const what = c.carrier || c.origin || cfg.label;
+    return `• ${cfg.icon} ${cfg.label} — ${what} at ${fmtT(c.departs_at)}`;
+  }).join('\n');
+
+  document.getElementById('guardrailTitle').textContent = '⚠ Possible double-booking';
+  document.getElementById('guardrailMsg').textContent =
+    `This overlaps in time with ${conflicts.length === 1 ? 'an existing segment' : conflicts.length + ' existing segments'}:\n${lines}`;
+
+  const actions = document.getElementById('guardrailActions');
+  actions.innerHTML = '';
+  const btnAnyway = document.createElement('button');
+  btnAnyway.className = 'btn btn-ghost';
+  btnAnyway.style.color = 'var(--text-tertiary)';
+  btnAnyway.textContent = 'Save anyway';
+  btnAnyway.onclick = () => { closeGuardrail(); onProceed(); };
   actions.appendChild(btnAnyway);
 
   document.getElementById('guardrailOverlay').classList.add('open');
