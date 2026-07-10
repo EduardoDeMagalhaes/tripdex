@@ -38,7 +38,7 @@ Return ONLY JSON:
   "trip": {"name": null, "start_date": null, "end_date": null},
   "save_segments": [
     {
-      "type": "flight|hotel|train|taxi|car|activity|other",
+      "type": "flight|hotel|train|taxi|car|activity|event|meeting|appointment|other",
       "origin": null, "destination": null, "carrier": null,
       "flight_iata": null,
       "departs_at": "YYYY-MM-DDTHH:MM",

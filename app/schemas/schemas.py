@@ -32,6 +32,17 @@ class SegmentOut(SegmentBase):
     created_at: datetime
     updated_at: datetime
 
+class CustomSegmentTypeCreate(BaseModel):
+    label: str
+    icon: Optional[str] = "📌"
+
+class CustomSegmentTypeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    key: str
+    label: str
+    icon: str
+
 class TripBase(BaseModel):
     name: str
     start_date: Optional[str] = None

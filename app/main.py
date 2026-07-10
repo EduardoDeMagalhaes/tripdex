@@ -8,6 +8,7 @@ from app.routers import trips, segments, emails, lookup, enrich, auth
 from app.routers import parse_dialog, parse_assist, parse_planner, parse_connect, calendar
 from app.routers import source_emails
 from app.routers import feedback
+from app.routers import custom_types
 
 Base.metadata.create_all(bind=engine)
 
@@ -102,6 +103,7 @@ app.include_router(auth.router)
 app.include_router(calendar.router)
 app.include_router(source_emails.router)
 app.include_router(feedback.router)
+app.include_router(custom_types.router)
 
 @app.get("/health")
 def health():

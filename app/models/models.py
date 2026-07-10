@@ -44,6 +44,15 @@ class Segment(Base):
     trip      = relationship("Trip", back_populates="segments")
     raw_email = relationship("RawEmail", back_populates="segments")
 
+class CustomSegmentType(Base):
+    __tablename__ = "custom_segment_types"
+    id         = Column(String, primary_key=True, default=new_uuid)
+    user_id    = Column(String, nullable=False)
+    key        = Column(String, nullable=False)   # slug used as segment.type, e.g. "memorial_visit"
+    label      = Column(String, nullable=False)   # display label, e.g. "Memorial visit"
+    icon       = Column(String, nullable=False, default="📌")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
 class RawEmail(Base):
     __tablename__ = "raw_emails"
     id           = Column(String, primary_key=True, default=new_uuid)

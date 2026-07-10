@@ -368,7 +368,7 @@ def create_trip_from_segments(db, segments: list, user_id: str):
         month_str = _dt.now(_tz.utc).strftime("%b %Y")
 
     trip_name = f"{primary_dest} · {month_str}" if primary_dest else f"Trip · {month_str}"
-    trip_id = str(_uuid_mod.uuid4())
+    trip_id = str(_uuid.uuid4())
     now = _dt.now(_tz.utc).isoformat()
     db.execute(_text("""
         INSERT INTO trips (id, name, start_date, end_date, location, user_id, home_currency, created_at)

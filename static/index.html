@@ -154,8 +154,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   .modal-title{font-size:18px;margin-bottom:14px}
 
   /* ── Type picker: 3 cols on mobile ── */
-  .type-picker{grid-template-columns:repeat(3,1fr)}
-  .type-btn{padding:10px 4px}
+  .type-btn{flex-basis:30%;padding:10px 4px}
   .type-btn-icon{font-size:20px}
 
   /* ── Form grid: single column ── */
@@ -565,8 +564,8 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   outline:none;transition:border-color .15s}
 .form-input:focus{border-color:var(--ink4);background:var(--paper)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.type-picker{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
-.type-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;
+.type-picker{display:flex;flex-wrap:wrap;gap:5px}
+.type-btn{flex:1 1 58px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;
   border:1px solid var(--paper3);border-radius:8px;cursor:pointer;background:var(--paper);
   transition:all .15s;font-family:var(--sans)}
 .type-btn:hover{border-color:var(--ink4);background:var(--paper2)}
@@ -847,14 +846,25 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   <div id="segFormFields">
   <div class="form-row">
     <label class="form-label">Type</label>
-    <div class="type-picker" style="grid-template-columns:repeat(7,1fr)">
+    <div class="type-picker" id="typePicker">
       <button class="type-btn sel" onclick="pickType(this,'flight')"><span class="type-btn-icon">✈</span><span class="type-btn-lbl">Flight</span></button>
       <button class="type-btn" onclick="pickType(this,'hotel')"><span class="type-btn-icon">🏨</span><span class="type-btn-lbl">Hotel</span></button>
       <button class="type-btn" onclick="pickType(this,'train')"><span class="type-btn-icon">🚂</span><span class="type-btn-lbl">Train</span></button>
       <button class="type-btn" onclick="pickType(this,'taxi')"><span class="type-btn-icon">🚕</span><span class="type-btn-lbl">Taxi</span></button>
       <button class="type-btn" onclick="pickType(this,'car')"><span class="type-btn-icon">🚗</span><span class="type-btn-lbl">Car</span></button>
       <button class="type-btn" onclick="pickType(this,'activity')"><span class="type-btn-icon">🎯</span><span class="type-btn-lbl">Activity</span></button>
+      <button class="type-btn" onclick="pickType(this,'event')"><span class="type-btn-icon">📅</span><span class="type-btn-lbl">Event</span></button>
+      <button class="type-btn" onclick="pickType(this,'meeting')"><span class="type-btn-icon">🤝</span><span class="type-btn-lbl">Meeting</span></button>
+      <button class="type-btn" onclick="pickType(this,'appointment')"><span class="type-btn-icon">🩺</span><span class="type-btn-lbl">Appt.</span></button>
       <button class="type-btn" onclick="pickType(this,'other')"><span class="type-btn-icon">📌</span><span class="type-btn-lbl">Other</span></button>
+      <span id="customTypeBtns"></span>
+      <button class="type-btn" id="addTypeBtn" type="button" onclick="toggleAddTypeForm()"><span class="type-btn-icon">➕</span><span class="type-btn-lbl">Add type</span></button>
+    </div>
+    <div id="addTypeForm" style="display:none;margin-top:8px;gap:6px;align-items:center">
+      <input class="form-input" id="newTypeIcon" maxlength="4" placeholder="📌" style="width:48px;text-align:center;flex:0 0 auto">
+      <input class="form-input" id="newTypeLabel" maxlength="40" placeholder="New type name, e.g. Memorial visit" style="flex:1 1 auto">
+      <button class="btn btn-accent btn-sm" type="button" onclick="saveNewType()">Save</button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="toggleAddTypeForm(false)">✕</button>
     </div>
   </div>
   <div class="form-grid">
@@ -1166,6 +1176,7 @@ async function boot() {
   renderUserPill();
   if (window.innerWidth <= 700) document.getElementById('mobMenuBtn').style.display = 'inline-flex';
   if (window.innerWidth <= 700) document.getElementById('mobFab').style.display = 'flex';
+  await loadCustomTypes();
   await loadTrips();
   await loadOrphans();
   await loadUsageWidget();
@@ -2687,7 +2698,74 @@ function renderMeta() {
 }
 
 // ── TIMELINE ─────────────────────────────────────────────────
-const TYPE_ICON = {flight:'✈',hotel:'🏨',train:'🚂',taxi:'🚕',car:'🚗',activity:'🎯',other:'📌'};
+const TYPE_CONFIG = {
+  flight:      {icon:'✈',  label:'Flight',      category:'transport', from:'ZRH or Zurich',    to:'HRG or Hurghada',   carrier:'Swiss LX 392',              fromLbl:'From',     toLbl:'To',               carrierLbl:'Flight'},
+  hotel:       {icon:'🏨', label:'Hotel',        category:'stay',      from:'City or address',  to:'',                  carrier:'Hotel name',                fromLbl:'Location', toLbl:'Check-out date',   carrierLbl:'Property'},
+  train:       {icon:'🚂', label:'Train',        category:'transport', from:'Bern Hbf',         to:'Zürich HB',         carrier:'SBB IC 1',                  fromLbl:'From',     toLbl:'To',               carrierLbl:'Train'},
+  taxi:        {icon:'🚕', label:'Taxi',         category:'transport', from:'Pickup address',   to:'Dropoff address',   carrier:'Driver or company name',    fromLbl:'Pickup',   toLbl:'Dropoff',          carrierLbl:'Driver / Company'},
+  car:         {icon:'🚗', label:'Car',          category:'transport', from:'Pick-up',          to:'Drop-off',          carrier:'Hertz / Avis…',             fromLbl:'Pick-up',  toLbl:'Drop-off',         carrierLbl:'Provider'},
+  activity:    {icon:'🎯', label:'Activity',     category:'generic',   from:'Location',         to:'',                  carrier:'Operator',                  fromLbl:'Location', toLbl:'',                 carrierLbl:'Activity name'},
+  event:       {icon:'📅', label:'Event',        category:'generic',   from:'Location',         to:'',                  carrier:'e.g. host, organizer',      fromLbl:'Location', toLbl:'',                 carrierLbl:'With / Reference'},
+  meeting:     {icon:'🤝', label:'Meeting',      category:'generic',   from:'Location',         to:'',                  carrier:'e.g. attendees, company',   fromLbl:'Location', toLbl:'',                 carrierLbl:'With'},
+  appointment: {icon:'🩺', label:'Appointment',  category:'generic',   from:'Location',         to:'',                  carrier:'e.g. doctor, clinic',       fromLbl:'Location', toLbl:'',                 carrierLbl:'With'},
+  other:       {icon:'📌', label:'Other',        category:'generic',   from:'',                 to:'',                  carrier:'',                          fromLbl:'Location', toLbl:'',                 carrierLbl:'Name'},
+};
+let customTypes = []; // [{id,key,label,icon}] — user's saved custom segment types, loaded from API
+
+async function loadCustomTypes() {
+  try {
+    const r = await fetch(`${API}/api/user/segment-types`, {credentials:'include'});
+    if (r.ok) customTypes = await r.json();
+  } catch(e) { console.error('[customTypes]', e); }
+  renderCustomTypeButtons();
+}
+
+function renderCustomTypeButtons() {
+  const el = document.getElementById('customTypeBtns');
+  if (!el) return;
+  el.innerHTML = customTypes.map(ct =>
+    `<button class="type-btn" onclick="pickType(this,'${ct.key}')"><span class="type-btn-icon">${ct.icon}</span><span class="type-btn-lbl">${ct.label}</span></button>`
+  ).join('');
+}
+
+function toggleAddTypeForm(show) {
+  const form = document.getElementById('addTypeForm');
+  const on = show === undefined ? form.style.display === 'none' : show;
+  form.style.display = on ? 'flex' : 'none';
+  if (on) { document.getElementById('newTypeLabel').value = ''; document.getElementById('newTypeIcon').value = ''; }
+}
+
+async function saveNewType() {
+  const label = document.getElementById('newTypeLabel').value.trim();
+  const icon  = document.getElementById('newTypeIcon').value.trim() || '📌';
+  if (!label) { toast('Give the new type a name'); return; }
+  try {
+    const r = await fetch(`${API}/api/user/segment-types`, {
+      method:'POST', credentials:'include', headers: H,
+      body: JSON.stringify({label, icon}),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const ct = await r.json();
+    if (!customTypes.find(c => c.id === ct.id)) customTypes.push(ct);
+    renderCustomTypeButtons();
+    toggleAddTypeForm(false);
+    const btn = [...document.querySelectorAll('.type-btn')].find(b => b.getAttribute('onclick') === `pickType(this,'${ct.key}')`);
+    if (btn) pickType(btn, ct.key);
+    toast('Type added ✓');
+  } catch(e) {
+    toast('Could not add type — check console');
+    console.error('[saveNewType]', e);
+  }
+}
+
+function typeCfg(type) {
+  if (TYPE_CONFIG[type]) return TYPE_CONFIG[type];
+  const ct = customTypes.find(c => c.key === type);
+  if (ct) return {icon: ct.icon, label: ct.label, category:'generic', from:'Location', to:'', carrier:'', fromLbl:'Location', toLbl:'', carrierLbl:'With / Reference'};
+  return TYPE_CONFIG.other;
+}
+function typeIcon(type) { return typeCfg(type).icon; }
+const TYPE_ICON = new Proxy({}, {get: (_, type) => typeIcon(type)});
 const BADGE     = {ok:'badge-pending',needs_review:'badge-review',failed:'badge-review',pending:'badge-pending'};
 const BADGE_LBL = {ok:'Unconfirmed',needs_review:'Needs review',failed:'Failed',pending:'Pending'};
 
@@ -3137,24 +3215,24 @@ function setNlLoading(on) {
 
 // ── SUMMARY CARD ─────────────────────────────────────────────
 
-const TYPE_ICON_MAP = {flight:'✈',hotel:'🏨',train:'🚂',taxi:'🚕',car:'🚗',activity:'🎯',other:'📌'};
-
 function renderSummary(draft, avNote, ttNote) {
   const area = document.getElementById('summaryArea');
-  const icon = TYPE_ICON_MAP[draft.type] || '📌';
+  const cfg = typeCfg(draft.type);
+  const icon = cfg.icon;
+  const isGeneric = cfg.category === 'generic';
 
   const fields = [
-    ['Type',        draft.type],
-    ['From',        draft.origin],
-    ['To',          draft.destination],
+    ['Type',        cfg.label],
+    [isGeneric ? 'Location' : 'From', draft.origin],
+    isGeneric ? null : ['To', draft.destination],
     ['Carrier',     draft.carrier],
     ['Flight',      draft.flight_iata],
-    ['Departs',     fmtDraftTime(draft.departs_at, draft.departs_tz)],
-    ['Arrives',     fmtDraftTime(draft.arrives_at, draft.arrives_tz)],
+    [isGeneric ? 'Starts' : 'Departs', fmtDraftTime(draft.departs_at, draft.departs_tz)],
+    [isGeneric ? 'Ends'   : 'Arrives', fmtDraftTime(draft.arrives_at, draft.arrives_tz)],
     ['Ref',         draft.confirmation_ref],
     ['Notes',       draft.meta && draft.meta.notes ? draft.meta.notes : null],
     ['Check-in nights', draft.meta && draft.meta.nights ? draft.meta.nights : null],
-  ].filter(([, v]) => v);
+  ].filter(Boolean).filter(([, v]) => v);
 
   const fieldsHtml = fields.map(([lbl, val]) =>
     `<div class="sum-field">
@@ -3176,7 +3254,7 @@ function renderSummary(draft, avNote, ttNote) {
 
   area.innerHTML = `
     <div class="summary-card">
-      <div class="summary-header">${icon} ${(draft.type||'').toUpperCase()} SUMMARY</div>
+      <div class="summary-header">${icon} ${(cfg.label||draft.type||'').toUpperCase()} SUMMARY</div>
       <div class="summary-body">${fieldsHtml}</div>
     </div>
     ${avHtml}
@@ -3228,42 +3306,34 @@ function fmtDraftTime(dt, tz) {
 }
 
 // ── SEGMENT MODAL ─────────────────────────────────────────────
-const TYPE_PLACEHOLDERS = {
-  flight:   {from:'ZRH or Zurich',to:'HRG or Hurghada',carrier:'Swiss LX 392',fromLbl:'From',toLbl:'To',carrierLbl:'Flight'},
-  hotel:    {from:'City or address',to:'',carrier:'Hotel name',fromLbl:'Location',toLbl:'Check-out date',carrierLbl:'Property'},
-  train:    {from:'Bern Hbf',to:'Zürich HB',carrier:'SBB IC 1',fromLbl:'From',toLbl:'To',carrierLbl:'Train'},
-  taxi:     {from:'Pickup address',to:'Dropoff address',carrier:'Driver or company name',fromLbl:'Pickup',toLbl:'Dropoff',carrierLbl:'Driver / Company'},
-  car:      {from:'Pick-up',to:'Drop-off',carrier:'Hertz / Avis…',fromLbl:'Pick-up',toLbl:'Drop-off',carrierLbl:'Provider'},
-  activity: {from:'Location',to:'',carrier:'Operator',fromLbl:'Location',toLbl:'',carrierLbl:'Activity name'},
-  other:    {from:'',to:'',carrier:'',fromLbl:'From',toLbl:'To',carrierLbl:'Name'},
-};
 let currentType = 'flight';
 
 function pickType(btn, type) {
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('sel'));
-  btn.classList.add('sel');
+  if (btn) btn.classList.add('sel');
   currentType = type;
-  const p = TYPE_PLACEHOLDERS[type] || TYPE_PLACEHOLDERS.other;
+  const p = typeCfg(type);
   document.getElementById('fFrom').placeholder     = p.from;
   document.getElementById('fTo').placeholder       = p.to;
   document.getElementById('fCarrier').placeholder  = p.carrier;
   document.getElementById('lblFrom').textContent   = p.fromLbl;
   document.getElementById('lblTo').textContent     = p.toLbl;
   document.getElementById('lblCarrier').textContent= p.carrierLbl;
-  const isHotelType  = type === 'hotel';
+  const isHotelType  = p.category === 'stay';
+  const isGeneric    = p.category === 'generic';
   const isFlightType = type === 'flight';
-  document.getElementById('arrRow').style.display           = (isHotelType || ['flight','train'].includes(type)) ? 'grid' : 'none';
+  document.getElementById('arrRow').style.display           = (isHotelType || isGeneric || ['flight','train'].includes(type)) ? 'grid' : 'none';
   document.getElementById('taxiFields').style.display       = type === 'taxi'  ? 'block' : 'none';
-  document.getElementById('hotelFields').style.display      = type === 'hotel' ? 'block' : 'none';
+  document.getElementById('hotelFields').style.display      = isHotelType ? 'block' : 'none';
   document.getElementById('carrierRow').style.display       = isFlightType ? 'none' : '';
   document.getElementById('flightCarrierRow').style.display = isFlightType ? 'grid' : 'none';
-  // Hotel: rename date/time labels
-  document.getElementById('lblDepDate').textContent = isHotelType ? 'Check-in date'  : 'Departure date';
-  document.getElementById('lblDepTime').textContent = isHotelType ? 'Check-in time'  : 'Departure time';
-  document.getElementById('lblArrDate').textContent = isHotelType ? 'Check-out date' : 'Arrival date';
-  document.getElementById('lblArrTime').textContent = isHotelType ? 'Check-out time' : 'Arrival time';
-  // Hotel: hide "To" field (not meaningful for hotels)
-  document.getElementById('fTo').closest('.form-row').style.display = isHotelType ? 'none' : '';
+  // Hotel / generic (event, meeting, appointment, other, custom): rename date/time labels
+  document.getElementById('lblDepDate').textContent = isHotelType ? 'Check-in date'  : (isGeneric ? 'Start date' : 'Departure date');
+  document.getElementById('lblDepTime').textContent = isHotelType ? 'Check-in time'  : (isGeneric ? 'Start time' : 'Departure time');
+  document.getElementById('lblArrDate').textContent = isHotelType ? 'Check-out date' : (isGeneric ? 'End date'   : 'Arrival date');
+  document.getElementById('lblArrTime').textContent = isHotelType ? 'Check-out time' : (isGeneric ? 'End time'   : 'Arrival time');
+  // Hotel / generic: hide "To" field (not meaningful — single location)
+  document.getElementById('fTo').closest('.form-row').style.display = (isHotelType || isGeneric) ? 'none' : '';
 }
 
 function openAddSeg() {

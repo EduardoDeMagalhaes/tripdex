@@ -26,7 +26,7 @@ def _verify_trip_ownership(trip_id: str, user: dict, db):
 
 
 SYSTEM_ONESHOT = """Extract travel data from natural language. Return ONLY JSON:
-{"type":"flight|hotel|train|car|activity|other",
+{"type":"flight|hotel|train|car|activity|event|meeting|appointment|other",
 "origin":"city or airport code","destination":"city or airport code",
 "carrier":"airline name and flight number e.g. Swiss LX392",
 "flight_iata":"IATA flight code only e.g. LX392 or null if not a flight",
@@ -45,10 +45,15 @@ You receive the trip details and a list of ALREADY LOGGED segments. Use them to:
 - Infer missing details from context (e.g. if the user just landed in Sao Paulo, timezone is America/Sao_Paulo).
 - Never ask about flights, hotels or transfers that are already logged.
 
-SEGMENT TYPES: flight, hotel, train, car, taxi, activity, other
+SEGMENT TYPES: flight, hotel, train, car, taxi, activity, event, meeting, appointment, other
 - taxi: pickup address, dropoff address, carrier=driver/company name, departs_at, meta.phone, meta.driver, meta.notes
 - car: rental pickup/dropoff, carrier=rental company
 - Use "taxi" for pre-booked rides, airport transfers, private drivers.
+- Use "event" for non-transport happenings with no fixed transport component (visits, celebrations, tributes, ceremonies, family gatherings).
+- Use "meeting" for work/business/social meetings.
+- Use "appointment" for medical, professional, or personal appointments (doctor, dentist, official errands).
+- Only fall back to "other" if none of the above fit.
+- If the user's account has custom segment types listed below (CUSTOM SEGMENT TYPES), prefer one of those keys over "other" when it clearly matches what the user described — use the exact key given, not the label.
 
 REASON BEFORE ASKING:
 - NEVER guess a flight number silently. If the user hasn't given one, offer concrete options.

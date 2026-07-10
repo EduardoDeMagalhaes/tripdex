@@ -16,7 +16,7 @@ from app.routers.parse_core import (
     _verify_trip_ownership, client
 )
 from sqlalchemy import text
-import os, json, re
+import os, json, re, asyncio
 
 router = APIRouter(prefix="/api/parse", tags=["parse"])
 
@@ -61,7 +61,7 @@ class DialogConfirmRequest(BaseModel):
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/text", response_model=SegmentOut, status_code=201)
-def parse_text(body: ParseRequest, bg: BackgroundTasks, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+async def parse_text(body: ParseRequest, bg: BackgroundTasks, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """One-shot NL parse — kept for backward compatibility."""
     _verify_trip_ownership(body.trip_id, user, db)
 
@@ -76,7 +76,7 @@ def parse_text(body: ParseRequest, bg: BackgroundTasks, db: Session = Depends(ge
     data = json.loads(r.choices[0].message.content)
     parse_status, av_note = "ok", None
     if data.get("type") == "flight":
-        data, parse_status, av_note = enrich_with_aviationstack(data)
+        data, parse_status, av_note = asyncio.run(enrich_with_aviationstack(data))
 
     cols = Segment.__table__.columns.keys()
     seg = Segment(trip_id=body.trip_id, parse_status=parse_status,
@@ -129,7 +129,15 @@ async def parse_dialog(body: DialogRequest, db: Session = Depends(get_db), user:
             marker = " ← CURRENT" if t.get("isCurrent") else ""
             lines.append(f"  - {t['name']} ({t.get('start_date','?')} to {t.get('end_date','?')}){marker}")
         trip_context = "\n\nAVAILABLE TRIPS (user is currently viewing the CURRENT one):\n" + "\n".join(lines)
-    messages = [{"role": "system", "content": SYSTEM_DIALOG + trip_context}]
+
+    from app.models.models import CustomSegmentType
+    custom_types = db.query(CustomSegmentType).filter(CustomSegmentType.user_id == user["id"]).all()
+    custom_types_context = ""
+    if custom_types:
+        ct_lines = [f"  - key=\"{ct.key}\" label=\"{ct.label}\"" for ct in custom_types]
+        custom_types_context = "\n\nCUSTOM SEGMENT TYPES (this user's own saved types — use the key if one matches):\n" + "\n".join(ct_lines)
+
+    messages = [{"role": "system", "content": SYSTEM_DIALOG + trip_context + custom_types_context}]
     for m in body.history:
         messages.append({"role": m.role, "content": m.content})
 
@@ -169,9 +177,9 @@ async def parse_dialog(body: DialogRequest, db: Session = Depends(get_db), user:
         )
 
     if status=='ready' and draft.get('type')=='flight' and draft.get('flight_iata'):
-        draft,_,av_note=enrich_with_aviationstack(draft)
+        draft,_,av_note=await enrich_with_aviationstack(draft)
     if status=='ready' and return_draft and return_draft.get('flight_iata'):
-        return_draft,_,return_av_note=enrich_with_aviationstack(return_draft)
+        return_draft,_,return_av_note=await enrich_with_aviationstack(return_draft)
     timetable_note=None
     if status=='ready' and draft.get('type')=='train' and not body.bypass_verification:
         draft, timetable_note, tt_connections = await verify_train_time(draft)
