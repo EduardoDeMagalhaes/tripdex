@@ -581,6 +581,40 @@ async def _enrich_flight(seg: Segment) -> dict:
                 "enrich_error": str(_e)}
 
 
+async def _enrich_generic_location(seg: Segment) -> dict:
+    """
+    For non-transport, non-hotel segments (event/meeting/appointment/activity/other
+    and any user-defined custom type): resolve the free-text location (origin) into
+    a proper address via OpenStreetMap/Nominatim, so the segment can show more than
+    just the name the user typed.
+    """
+    location = (seg.origin or "").strip()
+    if not location:
+        return {"enrich_status": "skipped", "enrich_reason": "no location given"}
+
+    params = {"q": location, "format": "jsonv2", "limit": 1, "addressdetails": 1}
+    try:
+        async with httpx.AsyncClient(timeout=10, headers=OSM_HEADERS) as client:
+            r = await client.get(OSM_NOMINATIM, params=params)
+            r.raise_for_status()
+            results = r.json()
+    except Exception as e:
+        log.warning("Nominatim error for %s: %s", location, e)
+        return {"enrich_status": "api_error", "enrich_reason": str(e)}
+
+    if not results:
+        return {"enrich_status": "no_match", "enrich_reason": f"Nominatim found nothing for: {location}"}
+
+    best = results[0]
+    return {
+        "enrich_status": "ok",
+        "enrich_source": "openstreetmap",
+        "enrich_at":     datetime.utcnow().isoformat(),
+        "address":       best.get("display_name"),
+        "lat":           best.get("lat"),
+        "lon":           best.get("lon"),
+    }
+
 async def _enrich_segment(seg: Segment) -> dict:
     if seg.type == "train":
         return await _enrich_train(seg)
@@ -588,7 +622,10 @@ async def _enrich_segment(seg: Segment) -> dict:
         return await _enrich_hotel(seg)
     if seg.type == "flight":
         return await _enrich_flight(seg)
-    return {"enrich_status": "skipped", "enrich_reason": f"type '{seg.type}' not supported yet"}
+    if seg.type in ("taxi", "car"):
+        return {"enrich_status": "skipped", "enrich_reason": f"type '{seg.type}' not supported yet"}
+    # event, meeting, appointment, activity, other, and any user-defined custom type
+    return await _enrich_generic_location(seg)
 
 
 # ── routes ─────────────────────────────────────────────────────────────────────

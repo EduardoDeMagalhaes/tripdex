@@ -51,6 +51,7 @@ class DialogResponse(BaseModel):
     timetable_note: Optional[str] = None
     guardrail_hit: Optional[dict] = None
     train_options: Optional[list] = None   # structured connections for UI picker
+    more_segments: list[str] = []           # other distinct segments detected in the same message, not yet logged
     history: list[DialogMessage] = []
 
 class DialogConfirmRequest(BaseModel):
@@ -197,7 +198,7 @@ async def parse_dialog(body: DialogRequest, db: Session = Depends(get_db), user:
                 missing=[],
                 history=new_history,
             )
-    return DialogResponse(status=status,question=gpt.get('question'),draft=draft,return_draft=return_draft,missing=gpt.get('missing',[]),aviationstack_note=av_note,return_aviationstack_note=return_av_note,timetable_note=timetable_note,history=new_history)
+    return DialogResponse(status=status,question=gpt.get('question'),draft=draft,return_draft=return_draft,missing=gpt.get('missing',[]),aviationstack_note=av_note,return_aviationstack_note=return_av_note,timetable_note=timetable_note,more_segments=gpt.get('more_segments',[]),history=new_history)
 
 
 @router.post("/dialog/confirm", response_model=SegmentOut, status_code=201)

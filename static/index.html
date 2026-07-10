@@ -2953,6 +2953,22 @@ function detailFields(s) {
     out += df('Confirmation', s.confirmation_ref);
   }
 
+  // ── GENERIC (event / meeting / appointment / activity / other / custom) ─────
+  if (!['flight','train','hotel','taxi'].includes(type)) {
+    if (m.address) {
+      const mapUrl = m.lat && m.lon
+        ? `https://www.openstreetmap.org/?mlat=${m.lat}&mlon=${m.lon}#map=17/${m.lat}/${m.lon}`
+        : `https://www.openstreetmap.org/search?query=${encodeURIComponent(m.address)}`;
+      out += df('Address', `<a href="${mapUrl}" target="_blank" style="color:var(--blue)">${m.address}</a>`);
+    } else if (m.enrich_status === 'no_match' && s.origin) {
+      out += `<div style="grid-column:1/-1;padding:6px 10px;background:#fef3e8;border-radius:6px;font-size:12px;color:#9a6000;border:1px solid #f5d5b0">
+        📍 Couldn't find an exact address for "${s.origin}"
+      </div>`;
+    }
+    out += df('With', s.carrier);
+    out += df('Confirmation', s.confirmation_ref);
+  }
+
   // ── UNIVERSAL ─────────────────────────────────────────
   if (m.notes) out += df('Notes', m.notes);
   if (s.parse_status === 'needs_review' || s.parse_status === 'failed') {
@@ -3006,6 +3022,7 @@ async function sendDialogTurn(text, {showInThread=true, bypassGuardrails=false}=
     dlg.ttNote       = res.timetable_note || null;
     dlg.returnDraft  = res.return_draft || null;
     dlg.returnAvNote = res.return_aviationstack_note || null;
+    dlg.moreSegments = res.more_segments || [];
 
     if (showInThread) appendThread('user', text);
 
@@ -3091,6 +3108,39 @@ function cancelDialog() {
   document.getElementById('nlInput').placeholder = 'e.g. flight ZRH to HRG Oct 10 07:15 Swiss LX392…';
   document.getElementById('nlInput').value = '';
   // no auto-focus
+}
+
+function appendMoreSegmentsPrompt(items) {
+  const thread = document.getElementById('dialogThread');
+  const msgEl = document.createElement('div');
+  msgEl.className = 'dialog-msg bot';
+  msgEl.textContent = items.length === 1
+    ? "Saved \u2713 You also mentioned another one \u2014 want me to log it too?"
+    : `Saved \u2713 You also mentioned ${items.length} more \u2014 want me to log them too?`;
+  thread.appendChild(msgEl);
+
+  const actionsEl = document.createElement('div');
+  actionsEl.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin:4px 0 8px 0';
+  items.forEach((item, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-ghost';
+    btn.style.cssText = 'text-align:left;font-size:12px;padding:6px 10px';
+    btn.textContent = `+ ${item}`;
+    btn.onclick = async () => {
+      actionsEl.querySelectorAll('button').forEach(b => b.disabled = true);
+      dlg.moreSegments = items.filter((_, j) => j !== i);
+      await sendDialogTurn(item, {showInThread:true});
+    };
+    actionsEl.appendChild(btn);
+  });
+  const skipBtn = document.createElement('button');
+  skipBtn.className = 'btn btn-ghost';
+  skipBtn.style.cssText = 'text-align:left;font-size:12px;padding:6px 10px;color:var(--ink3)';
+  skipBtn.textContent = "No thanks, that's all";
+  skipBtn.onclick = () => { actionsEl.querySelectorAll('button').forEach(b => b.disabled = true); cancelDialog(); };
+  actionsEl.appendChild(skipBtn);
+  thread.appendChild(actionsEl);
+  thread.scrollTop = thread.scrollHeight;
 }
 
 function appendGuardrailInline(message, options, meta) {
@@ -3287,8 +3337,15 @@ async function confirmSave() {
         body: JSON.stringify({trip_id: targetTripId || currentTrip.id, draft}),
       });
       if (!r.ok) throw new Error(await r.text());
-      cancelDialog();
       await selectTrip(currentTrip);
+      const pending = dlg.moreSegments || [];
+      document.getElementById('summaryArea').innerHTML = '';
+      dlg.draft = null;
+      if (pending.length) {
+        appendMoreSegmentsPrompt(pending);
+      } else {
+        cancelDialog();
+      }
       toast('Segment saved ✓');
     } catch(e) {
       toast('Error saving [ERR03] — check console');
@@ -3360,8 +3417,8 @@ function openEditSeg(id) {
   if (enrichBtn) enrichBtn.style.display = seg4enrich && ['flight','train','hotel'].includes(seg4enrich.type) ? 'inline-flex' : 'none';
   clearSegForm();
   const typeBtn = [...document.querySelectorAll('.type-btn')]
-    .find(b => b.getAttribute('onclick').includes(`'${seg.type}'`));
-  if (typeBtn) pickType(typeBtn, seg.type);
+    .find(b => (b.getAttribute('onclick')||'').includes(`'${seg.type}'`));
+  pickType(typeBtn || null, seg.type);
   document.getElementById('fFrom').value    = seg.origin || '';
   document.getElementById('fTo').value      = seg.destination || '';
   document.getElementById('fCarrier').value = seg.carrier || '';

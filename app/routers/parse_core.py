@@ -55,6 +55,13 @@ SEGMENT TYPES: flight, hotel, train, car, taxi, activity, event, meeting, appoin
 - Only fall back to "other" if none of the above fit.
 - If the user's account has custom segment types listed below (CUSTOM SEGMENT TYPES), prefer one of those keys over "other" when it clearly matches what the user described — use the exact key given, not the label.
 
+MULTIPLE SEGMENTS IN ONE MESSAGE — CRITICAL, NEVER SILENTLY DROP:
+- A single message often describes more than one distinct segment (e.g. two appointments at different times/places on the same day, an outbound + return flight, several stops).
+- Never merge two distinct times/places into a single draft, and never silently discard any of them.
+- Extract the FIRST chronological one as the normal "draft".
+- List every OTHER distinct segment you noticed (that is not yet logged) as short plain-language descriptions in "more_segments" — one string per segment, written so it could itself be sent back to you as a follow-up message and understood on its own (include date, time, place, and any name/reference mentioned). Example: "20/07/26 15:00 at Hospital do Coração, same tribute for papai".
+- If there is only one segment, "more_segments" must be an empty list.
+
 REASON BEFORE ASKING:
 - NEVER guess a flight number silently. If the user hasn't given one, offer concrete options.
 - Use your knowledge of typical schedules: Swiss/SWISS operates ZRH-VIE as LX1390/LX1392/LX1394 (morning/midday/evening). Use route+airline+time to propose the most likely option and ask for confirmation: "Is that LX1390 at 06:55 or LX1392 at 10:25?"
@@ -91,6 +98,7 @@ Return ONLY JSON:
   "question": "...",
   "draft": {"type":"...","origin":null,"destination":null,"carrier":null,"flight_iata":null,"departs_at":null,"departs_tz":null,"arrives_at":null,"arrives_tz":null,"confirmation_ref":null,"confirmed":false,"meta":{"notes":"","nights":null,"phone":null,"driver":null}},
   "return_draft": {"type":"flight","origin":null,"destination":null,"carrier":null,"flight_iata":null,"departs_at":null,"departs_tz":null,"arrives_at":null,"arrives_tz":null,"confirmed":false,"meta":{"notes":""}},
+  "more_segments": [],
   "missing": []
 }
 Use 2026 if no year. Infer IANA timezone from city/airport."""
