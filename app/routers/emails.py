@@ -15,6 +15,7 @@ from app.routers.email_templates import send_unregistered_reply, send_ingest_rep
 from sqlalchemy import text
 from openai import OpenAI
 import os, json, re as _re
+import base64
 import urllib.parse, urllib.request
 import io as _io, uuid as _uuid
 import math as _math
@@ -717,6 +718,7 @@ def normalise_segments(raw):
 
 @router.post("/upload-pdf")
 async def upload_pdf(
+    bg: BackgroundTasks,
     file: UploadFile = File(...),
     trip_id: str = None,
     db: Session = Depends(get_db),
@@ -810,6 +812,130 @@ async def upload_pdf(
         to=user["email"],
         status="ok",
         subject=f"PDF upload: {file.filename}",
+        segments_data=segments_data,
+        trip_name=trip_obj.name if trip_obj else None,
+    )
+
+    return IngestResponse(ok=True, message_id=message_id, trip_id=trip_id, segments_created=created)
+
+
+# ── Image upload endpoint ─────────────────────────────────────────────────────
+
+IMAGE_UPLOAD_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+HEIC_UPLOAD_CONTENT_TYPES  = {"image/heic", "image/heif"}
+MAX_UPLOAD_IMAGES      = 6
+MAX_UPLOAD_IMAGE_BYTES = 15 * 1024 * 1024  # 15MB
+
+
+def _heic_bytes_to_jpeg_b64(data: bytes) -> str:
+    import pillow_heif
+    from PIL import Image
+    heif_file = pillow_heif.read_heif(data)
+    img = Image.frombytes(heif_file.mode, heif_file.size, heif_file.data, "raw")
+    buf = _io.BytesIO()
+    img.convert("RGB").save(buf, format="JPEG", quality=88)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
+
+@router.post("/upload-image")
+async def upload_image(
+    bg: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    trip_id: str = None,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Accept one or more image uploads (screenshot/photo of a booking confirmation,
+    boarding pass, itinerary — jpg/png/webp/gif or HEIC/HEIF from iPhone), run
+    through the same GPT-4o vision path as email image attachments, and return
+    the same IngestResponse shape as /upload-pdf.
+    """
+    if not files:
+        raise HTTPException(400, "No files provided")
+    if len(files) > MAX_UPLOAD_IMAGES:
+        raise HTTPException(400, f"Too many images — maximum {MAX_UPLOAD_IMAGES} per upload")
+
+    data_uris: List[str] = []
+    filenames: List[str] = []
+    for file in files:
+        ct = (file.content_type or "").lower()
+        ext = (file.filename or "").lower().rsplit(".", 1)[-1] if file.filename and "." in file.filename else ""
+        is_heic = ct in HEIC_UPLOAD_CONTENT_TYPES or ext in {"heic", "heif"}
+        is_std_image = ct in IMAGE_UPLOAD_CONTENT_TYPES or ext in {"jpg", "jpeg", "png", "webp", "gif"}
+        if not (is_heic or is_std_image):
+            raise HTTPException(400, f"Unsupported file type: {file.filename} ({ct or 'unknown'})")
+
+        raw_bytes = await file.read()
+        if len(raw_bytes) > MAX_UPLOAD_IMAGE_BYTES:
+            raise HTTPException(413, f"{file.filename} is too large — maximum 15 MB per image")
+
+        if is_heic:
+            try:
+                b64 = _heic_bytes_to_jpeg_b64(raw_bytes)
+            except Exception as e:
+                raise HTTPException(422, f"Could not read {file.filename}: {e}")
+            data_uris.append(f"data:image/jpeg;base64,{b64}")
+        else:
+            mime = ct if ct in IMAGE_UPLOAD_CONTENT_TYPES else "image/jpeg"
+            data_uris.append(f"data:{mime};base64,{base64.b64encode(raw_bytes).decode('ascii')}")
+        filenames.append(file.filename or "image")
+
+    # ── Resolve user and validate trip ────────────────────────────────────────
+    message_id = f"image-upload-{_uuid.uuid4().hex[:12]}"
+
+    if trip_id:
+        trip = db.query(Trip).filter(Trip.id == trip_id, Trip.user_id == user["id"]).first()
+        if not trip:
+            raise HTTPException(404, "Trip not found")
+    else:
+        trip = None
+
+    subject = f"Photo upload: {', '.join(filenames)}"
+    raw = RawEmail(
+        message_id=message_id,
+        from_address=user["email"],
+        subject=subject,
+        body_text="",
+        parse_status="processing",
+    )
+    db.add(raw); db.flush()
+
+    try:
+        segments_data = call_gpt(subject, "", images=data_uris)
+    except Exception as e:
+        raw.parse_status = "failed"; db.commit()
+        return IngestResponse(ok=False, message_id=message_id, parse_status="failed", error=str(e))
+
+    if not segments_data:
+        raw.parse_status = "no_segments"; db.commit()
+        return IngestResponse(ok=True, message_id=message_id, parse_status="no_segments", segments_created=0)
+
+    if not trip_id:
+        trip = find_best_trip(db, segments_data, user_id=user["id"])
+        trip_id = trip.id if trip else None
+
+    if not trip_id:
+        raw.parse_status = "failed"; db.commit()
+        return IngestResponse(ok=False, message_id=message_id, parse_status="failed",
+                              error="Could not match image to a trip — create a trip first")
+
+    raw.trip_id = trip_id
+    cols = Segment.__table__.columns.keys()
+    created = 0
+    for seg_data in segments_data:
+        seg = Segment(trip_id=trip_id, raw_email_id=raw.id, parse_status="ok",
+                      **{k: v for k, v in seg_data.items() if k in cols})
+        seg.meta = seg_data.get("meta", {}); seg.meta["source"] = "image_upload"
+        db.add(seg); db.flush(); schedule_enrich(bg, seg.id); created += 1
+
+    raw.parse_status = "ok"; db.commit()
+
+    trip_obj = db.query(Trip).filter(Trip.id == trip_id).first()
+    send_ingest_reply(
+        to=user["email"],
+        status="ok",
+        subject=subject,
         segments_data=segments_data,
         trip_name=trip_obj.name if trip_obj else None,
     )

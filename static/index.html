@@ -546,6 +546,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
 .pdf-drop-sub{font-size:12px;color:var(--ink3);line-height:1.5}
 .pdf-progress{margin-top:10px;font-size:12px;color:var(--ink3);font-style:italic}
 #pdfFileInput{display:none}
+#imageFileInput{display:none}
 
 /* ── MODAL ── */
 .overlay{display:none;position:fixed;inset:0;background:rgba(26,24,20,.55);
@@ -747,6 +748,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   </div>
 </header>
 <input type="file" id="pdfFileInput" accept=".pdf,application/pdf" onchange="handlePdfFile(this.files[0])">
+<input type="file" id="imageFileInput" accept="image/*,.heic,.heif" multiple onchange="handleImageFiles(this.files)">
 <div class="mob-overlay" id="mobOverlay" onclick="toggleSidebar()"></div>
 <button id="mobFab" onclick="openAddSeg()">＋ Add segment</button>
 
@@ -2370,6 +2372,11 @@ function renderHome(container) {
         <span class="home-action-label">Upload PDF</span>
         <span class="home-action-sub">Import a booking confirmation or boarding pass</span>
       </div>
+      <div class="home-action" onclick="triggerImageUpload()">
+        <span class="home-action-icon">📷</span>
+        <span class="home-action-label">Upload photo</span>
+        <span class="home-action-sub">A screenshot or photo of a confirmation, ticket, or pass</span>
+      </div>
       <div class="home-action" onclick="openNewTrip()">
         <span class="home-action-icon">＋</span>
         <span class="home-action-label">New trip</span>
@@ -2604,6 +2611,59 @@ async function handlePdfFile(file) {
   } finally {
     if (prog) { prog.textContent = ''; prog.style.display = 'none'; }
     document.getElementById('pdfFileInput').value = '';
+  }
+}
+
+
+// ── Image Upload ──────────────────────────────────────────────────────────────
+const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
+
+function triggerImageUpload() {
+  if (!currentTrip) { toast('Select a trip first'); return; }
+  document.getElementById('imageFileInput').click();
+}
+
+async function handleImageFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (!currentTrip) { toast('Select a trip first'); return; }
+
+  const bad = files.find(f => !IMAGE_EXT_RE.test(f.name));
+  if (bad) { toast(`Please select image files only (jpg/png/webp/gif/heic) — "${bad.name}" isn't one`); return; }
+  if (files.length > 6) { toast('Maximum 6 images per upload'); return; }
+
+  const prog = document.getElementById('pdfProgress');
+  if (prog) {
+    prog.style.display = 'block';
+    prog.textContent = files.length === 1 ? `Parsing ${files[0].name}…` : `Parsing ${files.length} images…`;
+  }
+
+  try {
+    const form = new FormData();
+    files.forEach(f => form.append('files', f));
+
+    const url = `${API}/api/emails/upload-image?trip_id=${encodeURIComponent(currentTrip.id)}`;
+    const r = await fetch(url, { method: 'POST', credentials: 'include', body: form });
+    const res = await r.json();
+
+    if (!r.ok) throw new Error(res.detail || 'Upload failed');
+
+    if (res.parse_status === 'no_segments') {
+      toast('No travel details found in that image — try a clearer photo or forward the email instead');
+    } else if (res.parse_status === 'failed') {
+      toast('Could not process image: ' + (res.error || 'unknown error'));
+    } else if (res.segments_created > 0) {
+      toast(`✓ Added ${res.segments_created} segment${res.segments_created > 1 ? 's' : ''} from photo`);
+      await loadTrips();
+      const updated = trips.find(t => t.id === currentTrip.id);
+      if (updated) selectTrip(updated);
+    }
+  } catch(e) {
+    toast('Image upload failed [ERR14]: ' + e.message);
+    console.error('[ERR14]', e);
+  } finally {
+    if (prog) { prog.textContent = ''; prog.style.display = 'none'; }
+    document.getElementById('imageFileInput').value = '';
   }
 }
 
