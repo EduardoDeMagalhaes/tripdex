@@ -743,6 +743,8 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   </div>
   <div class="hdr-right" id="hdrUser">
     <div id="hdrAvatar" class="avatar" style="display:none" onclick="openProfile()" title="Profile"></div>
+    <button class="btn btn-ghost btn-sm" onclick="triggerPdfUpload()" id="tripUploadPdfBtn" style="display:none" title="Upload PDF">📄</button>
+    <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload()" id="tripUploadImgBtn" style="display:none" title="Upload photo">📷</button>
     <button class="btn btn-ghost btn-sm" onclick="openEditTrip()" id="editTripBtn" style="display:none">Edit trip</button>
     <button class="btn btn-primary btn-sm" id="addSegBtn" onclick="openAddSeg()" style="display:none">+ Add segment</button>
   </div>
@@ -1360,6 +1362,8 @@ function openProfile() {
   closeHomeView();
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
   const etb2 = document.getElementById('editTripBtn'); if (etb2) etb2.style.display = 'none';
+  const upb2 = document.getElementById('tripUploadPdfBtn'); if (upb2) upb2.style.display = 'none';
+  const uib2 = document.getElementById('tripUploadImgBtn'); if (uib2) uib2.style.display = 'none';
   ['tripBar','nlBar','statusBar','timeline'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -2241,6 +2245,8 @@ function openSettings() {
   closeHomeView();
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
   const etb3 = document.getElementById('editTripBtn'); if (etb3) etb3.style.display = 'none';
+  const upb3 = document.getElementById('tripUploadPdfBtn'); if (upb3) upb3.style.display = 'none';
+  const uib3 = document.getElementById('tripUploadImgBtn'); if (uib3) uib3.style.display = 'none';
   ['tripBar','nlBar','statusBar','timeline'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -2290,6 +2296,8 @@ function openHomeView() {
   currentTrip = null;
   const etb = document.getElementById('editTripBtn'); if (etb) etb.style.display = 'none';
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
+  const upb = document.getElementById('tripUploadPdfBtn'); if (upb) upb.style.display = 'none';
+  const uib = document.getElementById('tripUploadImgBtn'); if (uib) uib.style.display = 'none';
   closeSidebar();
   closeInbox();
   closeProfile();
@@ -2712,6 +2720,8 @@ async function selectTrip(trip) {
   if (!trip) return;
   const etb = document.getElementById('editTripBtn'); if (etb) etb.style.display = 'inline-flex';
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'inline-flex';
+  const upb = document.getElementById('tripUploadPdfBtn'); if (upb) upb.style.display = 'inline-flex';
+  const uib = document.getElementById('tripUploadImgBtn'); if (uib) uib.style.display = 'inline-flex';
   if (document.activeElement) document.activeElement.blur();
   closeInbox(); closeProfile(); _showMainContent();
   if (window.innerWidth <= 700) closeSidebar();
