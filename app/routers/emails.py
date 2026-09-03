@@ -5,7 +5,7 @@ Transactional email functions live in email_templates.py.
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from app.database import get_db
 from app.models.models import RawEmail, Segment, Trip
 from app.schemas.schemas import SegmentOut
@@ -70,6 +70,10 @@ def lookup_user_by_email(db, sender_email: str):
 
 
 SYSTEM = """Extract ALL travel segments from this booking confirmation email.
+The email may include one or more images (a screenshot or photo of a booking
+confirmation, boarding pass, ticket, or itinerary) in addition to or instead of
+text — read any attached images the same way you would read the email text and
+extract segments from whichever contains the travel details.
 You MUST return a JSON object with a single key "segments" whose value is an array.
 Each element represents one travel segment with this structure:
 {
@@ -419,13 +423,23 @@ def find_best_trip(db, segments, user_id: str = None):
     return None
 
 
-def call_gpt(subject, body_text):
+def call_gpt(subject, body_text, images=None):
+    text_content = f"Subject: {subject}\n\n{body_text}"
+    if images:
+        # Vision content blocks: text first, then each image as an image_url data URI.
+        # Same gpt-4o model already in use — no separate OCR/vision step needed.
+        user_content = [{"type": "text", "text": text_content}]
+        for data_uri in images:
+            user_content.append({"type": "image_url", "image_url": {"url": data_uri, "detail": "high"}})
+    else:
+        user_content = text_content
+
     r = client.chat.completions.create(
         model="gpt-4o", temperature=0,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": f"Subject: {subject}\n\n{body_text}"},
+            {"role": "user", "content": user_content},
         ],
     )
     parsed = json.loads(r.choices[0].message.content)
@@ -446,6 +460,7 @@ class IngestRequest(BaseModel):
     subject: str
     body_text: str
     trip_id: Optional[str] = None
+    images: Optional[List[str]] = None  # data-URI strings, e.g. "data:image/jpeg;base64,..."
 
 class IngestResponse(BaseModel):
     ok: bool
@@ -567,7 +582,7 @@ def ingest_email(body: IngestRequest, bg: BackgroundTasks, db: Session = Depends
                    subject=body.subject, body_text=body.body_text, parse_status="processing")
     db.add(raw); db.flush()
     try:
-        segments_data = call_gpt(body.subject, body.body_text)
+        segments_data = call_gpt(body.subject, body.body_text, images=body.images)
     except Exception as e:
         raw.parse_status = "failed"; db.commit()
         send_ingest_reply(sender_clean, "failed", body.subject)

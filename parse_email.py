@@ -19,12 +19,17 @@ import urllib.error
 import logging
 import traceback
 import io
+import base64
 
 # ── Config ───────────────────────────────────────────────────────────────────
 API_URL   = "http://localhost:8000/api/emails/ingest"
 API_TOKEN = "d5f9e9b215da795ef927a399c3eba355"
 LOG_FILE  = "/var/log/waypoint-email.log"
 VENV_SITE = "/home/eduardo/waypoint/venv/lib/python3.12/site-packages"
+MAX_IMAGES         = 6                 # cap per email — GPT-4o cost/latency guard
+MAX_IMAGE_BYTES     = 15 * 1024 * 1024  # 15MB per image (post-HEIC-conversion), matches nginx client_max_body_size elsewhere
+IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+HEIC_CONTENT_TYPES  = {"image/heic", "image/heif"}
 
 # Add venv to path so pdfplumber is available
 if VENV_SITE not in sys.path:
@@ -53,6 +58,60 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     except Exception as e:
         log.warning(f"PDF extraction failed: {e}")
         return ""
+
+
+def _heic_to_jpeg_b64(data: bytes) -> str | None:
+    """Convert HEIC/HEIF bytes to a base64 JPEG data URI-ready string, or None on failure."""
+    try:
+        import pillow_heif
+        from PIL import Image
+        heif_file = pillow_heif.read_heif(data)
+        img = Image.frombytes(heif_file.mode, heif_file.size, heif_file.data, "raw")
+        buf = io.BytesIO()
+        img.convert("RGB").save(buf, format="JPEG", quality=88)
+        return base64.b64encode(buf.getvalue()).decode("ascii")
+    except Exception as e:
+        log.warning(f"HEIC conversion failed: {e}")
+        return None
+
+
+def extract_images(msg: email.message.Message) -> list[str]:
+    """
+    Extract image attachments (jpg/png/webp/gif + HEIC/HEIF converted to jpeg) as a
+    list of data-URI strings ('data:image/jpeg;base64,...'), capped at MAX_IMAGES.
+    Inline images referenced only via Content-ID are still picked up — Waypoint
+    doesn't need to distinguish inline vs attached, just "is there a picture here".
+    """
+    images: list[str] = []
+    if not msg.is_multipart():
+        return images
+
+    for part in msg.walk():
+        if len(images) >= MAX_IMAGES:
+            log.warning(f"Hit MAX_IMAGES={MAX_IMAGES}, ignoring remaining image attachments")
+            break
+
+        ct = part.get_content_type()
+        if ct not in IMAGE_CONTENT_TYPES and ct not in HEIC_CONTENT_TYPES:
+            continue
+
+        raw = part.get_payload(decode=True)
+        if not raw:
+            continue
+        if len(raw) > MAX_IMAGE_BYTES:
+            log.warning(f"Skipping image ({ct}, {len(raw)} bytes) — over MAX_IMAGE_BYTES")
+            continue
+
+        if ct in HEIC_CONTENT_TYPES:
+            b64 = _heic_to_jpeg_b64(raw)
+            if not b64:
+                continue
+            images.append(f"data:image/jpeg;base64,{b64}")
+        else:
+            b64 = base64.b64encode(raw).decode("ascii")
+            images.append(f"data:{ct};base64,{b64}")
+
+    return images
 
 
 def extract_body(msg: email.message.Message) -> tuple[str, list[str]]:
@@ -140,21 +199,25 @@ def main():
 
     log.info(f"Processing: message_id={message_id} from={from_address} subject={subject}")
 
-    # Extract body + PDF text
+    # Extract body + PDF text + image attachments
     body_text, pdf_texts = extract_body(msg)
+    images = extract_images(msg)
 
     # Combine body + PDF content
     full_text = body_text
     if pdf_texts:
         full_text += "\n\n--- PDF ATTACHMENT ---\n\n" + "\n\n---\n\n".join(pdf_texts)
 
-    if not full_text.strip():
-        log.warning("No text content extracted from email")
+    if not full_text.strip() and not images:
+        log.warning("No text content or images extracted from email")
         sys.exit(0)
 
     # Truncate to ~12000 chars to stay within GPT context
     if len(full_text) > 12000:
         full_text = full_text[:12000] + "\n[truncated]"
+
+    if images:
+        log.info(f"Extracted {len(images)} image(s)")
 
     # Call the ingest API
     payload = {
@@ -162,6 +225,7 @@ def main():
         "from_address": from_address,
         "subject":      subject,
         "body_text":    full_text,
+        "images":       images,
     }
 
     try:
