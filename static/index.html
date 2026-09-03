@@ -39,7 +39,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:54px}
 .logo{font-family:var(--serif);font-size:19px;letter-spacing:-.02em;display:flex;align-items:center;gap:7px}
 .logo-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.hdr-right{display:flex;gap:8px;align-items:center}
+.hdr-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 
 /* ── BUTTONS ── */
 .btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:7px 14px;border-radius:6px;
@@ -743,8 +743,8 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   </div>
   <div class="hdr-right" id="hdrUser">
     <div id="hdrAvatar" class="avatar" style="display:none" onclick="openProfile()" title="Profile"></div>
-    <button class="btn btn-ghost btn-sm" onclick="triggerPdfUpload()" id="tripUploadPdfBtn" style="display:none" title="Upload PDF">📄</button>
-    <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload()" id="tripUploadImgBtn" style="display:none" title="Upload photo">📷</button>
+    <button class="btn btn-ghost btn-sm" onclick="triggerPdfUpload()" id="tripUploadPdfBtn" style="display:none" title="Import a booking confirmation or boarding pass as PDF">📄 Upload PDF</button>
+    <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload()" id="tripUploadImgBtn" style="display:none" title="Import a screenshot or photo of a confirmation, ticket, or pass">📷 Upload photo</button>
     <button class="btn btn-ghost btn-sm" onclick="openEditTrip()" id="editTripBtn" style="display:none">Edit trip</button>
     <button class="btn btn-primary btn-sm" id="addSegBtn" onclick="openAddSeg()" style="display:none">+ Add segment</button>
   </div>
