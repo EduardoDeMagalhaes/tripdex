@@ -576,51 +576,66 @@ def ingest_email(body: IngestRequest, bg: BackgroundTasks, db: Session = Depends
         raw.parse_status = "no_segments"; db.commit()
         send_ingest_reply(sender_clean, "no_segments", body.subject)
         return IngestResponse(ok=True, message_id=body.message_id, parse_status="no_segments", segments_created=0)
-    trip_id = body.trip_id
-    if not trip_id:
-        trip = find_best_trip(db, segments_data, user_id=user["id"])
-        trip_id = trip.id if trip else None
-    trip_created = False
-    if not trip_id:
-        # Check if any existing trip is close in date + location → ask user instead
-        all_user_trips = db.query(Trip).filter(Trip.user_id == user["id"]).all()
-        if all_user_trips and should_ask_user(db, segments_data, all_user_trips, user=user):
-            # Save as orphans, send confirmation email
-            tokens = save_orphan_segments(db, raw, segments_data, user["id"], all_user_trips)
-            raw.parse_status = "pending_assignment"
-            db.commit()
-            from app.routers.email_templates import send_assignment_email
-            send_assignment_email(
-                to=sender_clean,
-                subject=body.subject,
-                segments_data=segments_data,
-                trips_and_tokens=tokens,
-            )
-            return IngestResponse(ok=True, message_id=body.message_id,
-                                  parse_status="pending_assignment", segments_created=0)
-        # No close trips — auto-create
-        new_trip = create_trip_from_segments(db, segments_data, user_id=user["id"])
-        trip_id = new_trip.id
-        trip_created = True
-    raw.trip_id = trip_id
-    cols = Segment.__table__.columns.keys()
-    created = 0
-    for seg_data in segments_data:
-        seg = Segment(trip_id=trip_id, raw_email_id=raw.id, parse_status="ok",
-                      **{k: v for k, v in seg_data.items() if k in cols})
-        seg.meta = seg_data.get("meta", {}); seg.meta["source"] = "email"
-        db.add(seg); db.flush(); schedule_enrich(bg, seg.id); created += 1
-    raw.parse_status = "ok"; db.commit()
-    trip_obj = db.query(Trip).filter(Trip.id == trip_id).first()
-    send_ingest_reply(
-        to=sender_clean,
-        status="ok",
-        subject=body.subject,
-        segments_data=segments_data,
-        trip_name=trip_obj.name if trip_obj else None,
-        trip_created=trip_created,
-    )
-    return IngestResponse(ok=True, message_id=body.message_id, trip_id=trip_id, segments_created=created)
+    try:
+        trip_id = body.trip_id
+        if not trip_id:
+            trip = find_best_trip(db, segments_data, user_id=user["id"])
+            trip_id = trip.id if trip else None
+        trip_created = False
+        if not trip_id:
+            # Check if any existing trip is close in date + location → ask user instead
+            all_user_trips = db.query(Trip).filter(Trip.user_id == user["id"]).all()
+            if all_user_trips and should_ask_user(db, segments_data, all_user_trips, user=user):
+                # Save as orphans, send confirmation email
+                tokens = save_orphan_segments(db, raw, segments_data, user["id"], all_user_trips)
+                raw.parse_status = "pending_assignment"
+                db.commit()
+                from app.routers.email_templates import send_assignment_email
+                send_assignment_email(
+                    to=sender_clean,
+                    subject=body.subject,
+                    segments_data=segments_data,
+                    trips_and_tokens=tokens,
+                )
+                return IngestResponse(ok=True, message_id=body.message_id,
+                                      parse_status="pending_assignment", segments_created=0)
+            # No close trips — auto-create
+            new_trip = create_trip_from_segments(db, segments_data, user_id=user["id"])
+            trip_id = new_trip.id
+            trip_created = True
+        raw.trip_id = trip_id
+        cols = Segment.__table__.columns.keys()
+        created = 0
+        for seg_data in segments_data:
+            seg = Segment(trip_id=trip_id, raw_email_id=raw.id, parse_status="ok",
+                          **{k: v for k, v in seg_data.items() if k in cols})
+            seg.meta = seg_data.get("meta", {}); seg.meta["source"] = "email"
+            db.add(seg); db.flush(); schedule_enrich(bg, seg.id); created += 1
+        raw.parse_status = "ok"; db.commit()
+        trip_obj = db.query(Trip).filter(Trip.id == trip_id).first()
+        send_ingest_reply(
+            to=sender_clean,
+            status="ok",
+            subject=body.subject,
+            segments_data=segments_data,
+            trip_name=trip_obj.name if trip_obj else None,
+            trip_created=trip_created,
+        )
+        return IngestResponse(ok=True, message_id=body.message_id, trip_id=trip_id, segments_created=created)
+    except Exception as e:
+        # Any unexpected failure past this point (trip/segment creation, enrichment
+        # scheduling, etc.) must still notify the sender — don't let a bug produce
+        # silence. Roll back the half-done work, log a fresh failed RawEmail, reply.
+        import logging
+        logging.getLogger("waypoint").error(f"Unhandled ingest error for {body.message_id}: {e}", exc_info=True)
+        db.rollback()
+        raw_failed = RawEmail(
+            message_id=body.message_id, from_address=body.from_address,
+            subject=body.subject, body_text=body.body_text, parse_status="failed"
+        )
+        db.add(raw_failed); db.commit()
+        send_ingest_reply(sender_clean, "error", body.subject)
+        return IngestResponse(ok=False, message_id=body.message_id, parse_status="failed", error=str(e))
 
 
 @router.post("/reparse", response_model=IngestResponse)
