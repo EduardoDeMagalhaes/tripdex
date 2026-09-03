@@ -743,8 +743,6 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   </div>
   <div class="hdr-right" id="hdrUser">
     <div id="hdrAvatar" class="avatar" style="display:none" onclick="openProfile()" title="Profile"></div>
-    <button class="btn btn-ghost btn-sm" onclick="triggerPdfUpload()" id="tripUploadPdfBtn" style="display:none" title="Import a booking confirmation or boarding pass as PDF">📄 Upload PDF</button>
-    <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload()" id="tripUploadImgBtn" style="display:none" title="Import a screenshot or photo of a confirmation, ticket, or pass">📷 Upload photo</button>
     <button class="btn btn-ghost btn-sm" onclick="openEditTrip()" id="editTripBtn" style="display:none">Edit trip</button>
     <button class="btn btn-primary btn-sm" id="addSegBtn" onclick="openAddSeg()" style="display:none">+ Add segment</button>
   </div>
@@ -817,6 +815,8 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
         placeholder="e.g. flight ZRH to HRG Oct 10 07:15 Swiss LX392…"
         onkeydown="handleNlKey(event)">
       <button class="btn btn-primary btn-sm" id="nlBtn" onclick="nlSubmit()">Add</button>
+      <button class="btn btn-ghost btn-sm" onclick="triggerPdfUpload()" id="tripUploadPdfBtn" style="display:none" title="Import a booking confirmation or boarding pass as PDF">📄 PDF</button>
+      <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload()" id="tripUploadImgBtn" style="display:none" title="Import a screenshot or photo of a confirmation, ticket, or pass">📷 Photo</button>
       <button class="btn btn-ghost btn-sm" id="nlCancelBtn" onclick="cancelDialog()" style="display:none">✕</button>
     </div>
   </div>
