@@ -239,9 +239,14 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
 
 /* ── NL BAR ── */
 .nl-bar{background:var(--paper2);border:1px solid var(--paper3);border-radius:var(--r);
-  margin-bottom:1.25rem;overflow:hidden;transition:border-color .2s}
+  margin-bottom:1.25rem;overflow:hidden;transition:border-color .2s,background .2s;position:relative}
 .nl-bar:focus-within{border-color:var(--ink4)}
 .nl-bar.dialog-active{border-color:var(--accent);border-width:1.5px}
+.nl-bar.drag-over{border-color:var(--accent);border-width:1.5px;background:var(--paper3)}
+.nl-drop-hint{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  gap:8px;background:var(--paper2);font-family:var(--sans);font-size:14px;color:var(--accent);
+  pointer-events:none;z-index:1}
+.nl-bar.drag-over .nl-drop-hint{display:flex}
 
 .nl-input-row{display:flex;align-items:center;gap:8px;padding:8px 12px}
 .nl-icon{color:var(--accent);font-size:16px;flex-shrink:0}
@@ -802,6 +807,8 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
 
   <!-- NL / DIALOG BAR -->
   <div class="nl-bar" id="nlBar">
+    <!-- drag-and-drop overlay -->
+    <div class="nl-drop-hint" id="nlDropHint">📎 Drop a PDF or photo to add it</div>
     <!-- summary card -->
     <div id="summaryArea"></div>
     <!-- dialog thread: oldest at top, newest just above input -->
@@ -812,14 +819,15 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
     <div class="nl-input-row">
       <span class="nl-icon">✦</span>
       <input class="nl-input" id="nlInput"
-        placeholder="e.g. flight ZRH to HRG Oct 10 07:15 Swiss LX392…"
+        placeholder="Type a booking, drop a PDF or photo, or paste a screenshot…"
         onkeydown="handleNlKey(event)">
+      <button class="btn btn-ghost btn-sm" onclick="triggerAttachUpload()" id="tripAttachBtn" style="display:none" title="Attach a PDF or photo of a booking">📎</button>
       <button class="btn btn-primary btn-sm" id="nlBtn" onclick="nlSubmit()">Add</button>
-      <button class="btn btn-ghost btn-sm" onclick="triggerPdfUpload()" id="tripUploadPdfBtn" style="display:none" title="Import a booking confirmation or boarding pass as PDF">📄 PDF</button>
-      <button class="btn btn-ghost btn-sm" onclick="triggerImageUpload()" id="tripUploadImgBtn" style="display:none" title="Import a screenshot or photo of a confirmation, ticket, or pass">📷 Photo</button>
       <button class="btn btn-ghost btn-sm" id="nlCancelBtn" onclick="cancelDialog()" style="display:none">✕</button>
     </div>
   </div>
+  <input type="file" id="attachFileInput" accept=".pdf,application/pdf,image/*,.heic,.heif" multiple
+    style="display:none" onchange="handleAttachFiles(this.files)">
 
   <!-- BANNER -->
   <div class="banner banner-warn" id="reviewBanner" style="display:none">
@@ -1392,8 +1400,7 @@ function openProfile() {
   closeHomeView();
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
   const etb2 = document.getElementById('editTripBtn'); if (etb2) etb2.style.display = 'none';
-  const upb2 = document.getElementById('tripUploadPdfBtn'); if (upb2) upb2.style.display = 'none';
-  const uib2 = document.getElementById('tripUploadImgBtn'); if (uib2) uib2.style.display = 'none';
+  const atb = document.getElementById('tripAttachBtn'); if (atb) atb.style.display = 'none';
   ['tripBar','nlBar','statusBar','timeline'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -2100,8 +2107,7 @@ function openInbox() {
   closeHomeView();
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
   const etb4 = document.getElementById('editTripBtn'); if (etb4) etb4.style.display = 'none';
-  const upb4 = document.getElementById('tripUploadPdfBtn'); if (upb4) upb4.style.display = 'none';
-  const uib4 = document.getElementById('tripUploadImgBtn'); if (uib4) uib4.style.display = 'none';
+  const atb = document.getElementById('tripAttachBtn'); if (atb) atb.style.display = 'none';
   ['tripBar','nlBar','statusBar','timeline'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -2284,8 +2290,7 @@ function openSettings() {
   closeHomeView();
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
   const etb3 = document.getElementById('editTripBtn'); if (etb3) etb3.style.display = 'none';
-  const upb3 = document.getElementById('tripUploadPdfBtn'); if (upb3) upb3.style.display = 'none';
-  const uib3 = document.getElementById('tripUploadImgBtn'); if (uib3) uib3.style.display = 'none';
+  const atb = document.getElementById('tripAttachBtn'); if (atb) atb.style.display = 'none';
   ['tripBar','nlBar','statusBar','timeline'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -2336,8 +2341,7 @@ function openHomeView() {
   if (location.pathname !== '/') history.pushState({}, '', '/');
   const etb = document.getElementById('editTripBtn'); if (etb) etb.style.display = 'none';
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
-  const upb = document.getElementById('tripUploadPdfBtn'); if (upb) upb.style.display = 'none';
-  const uib = document.getElementById('tripUploadImgBtn'); if (uib) uib.style.display = 'none';
+  const atb = document.getElementById('tripAttachBtn'); if (atb) atb.style.display = 'none';
   closeSidebar();
   closeInbox();
   closeProfile();
@@ -2619,7 +2623,68 @@ function appendStuckCard(message) {
 }
 
 
-// ── PDF Upload ────────────────────────────────────────────────────────────────
+// ── Upload core (shared fetch logic — used by the unified attach flow below) ──
+async function uploadPdfCore(file, prog) {
+  if (prog) { prog.style.display = 'block'; prog.textContent = `Parsing ${file.name}…`; }
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const url = `${API}/api/emails/upload-pdf?trip_id=${encodeURIComponent(currentTrip.id)}`;
+    const r = await fetch(url, { method: 'POST', credentials: 'include', body: form });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.detail || 'Upload failed');
+
+    if (res.parse_status === 'no_segments') {
+      toast(`No travel details found in "${file.name}"`);
+    } else if (res.parse_status === 'failed') {
+      toast(`Could not process "${file.name}": ` + (res.error || 'unknown error'));
+    } else if (res.segments_created > 0) {
+      toast(`✓ Added ${res.segments_created} segment${res.segments_created > 1 ? 's' : ''} from ${file.name}`);
+      return true;
+    }
+  } catch(e) {
+    toast(`Upload failed for "${file.name}" [ERR13]: ` + e.message);
+    console.error('[ERR13]', e);
+  }
+  return false;
+}
+
+async function uploadImagesCore(files, prog) {
+  if (prog) {
+    prog.style.display = 'block';
+    prog.textContent = files.length === 1 ? `Parsing ${files[0].name}…` : `Parsing ${files.length} images…`;
+  }
+  try {
+    const form = new FormData();
+    files.forEach(f => form.append('files', f));
+    const url = `${API}/api/emails/upload-image?trip_id=${encodeURIComponent(currentTrip.id)}`;
+    const r = await fetch(url, { method: 'POST', credentials: 'include', body: form });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.detail || 'Upload failed');
+
+    if (res.parse_status === 'no_segments') {
+      toast('No travel details found in that image — try a clearer photo');
+    } else if (res.parse_status === 'failed') {
+      toast('Could not process image: ' + (res.error || 'unknown error'));
+    } else if (res.segments_created > 0) {
+      toast(`✓ Added ${res.segments_created} segment${res.segments_created > 1 ? 's' : ''} from photo`);
+      return true;
+    }
+  } catch(e) {
+    toast('Image upload failed [ERR14]: ' + e.message);
+    console.error('[ERR14]', e);
+  }
+  return false;
+}
+
+async function _refreshAfterUpload() {
+  await loadTrips();
+  const updated = trips.find(t => t.id === currentTrip.id);
+  if (updated) selectTrip(updated);
+}
+
+
+// ── Legacy single-purpose upload (still used by the Home page quick-action tiles) ──
 function triggerPdfUpload() {
   if (!currentTrip) { toast('Select a trip first'); return; }
   document.getElementById('pdfFileInput').click();
@@ -2629,41 +2694,13 @@ async function handlePdfFile(file) {
   if (!file) return;
   if (!file.name.toLowerCase().endsWith('.pdf')) { toast('Please select a PDF file'); return; }
   if (!currentTrip) { toast('Select a trip first'); return; }
-
   const prog = document.getElementById('pdfProgress');
-  if (prog) { prog.style.display = 'block'; prog.textContent = `Parsing ${file.name}…`; }
-
-  try {
-    const form = new FormData();
-    form.append('file', file);
-
-    const url = `${API}/api/emails/upload-pdf?trip_id=${encodeURIComponent(currentTrip.id)}`;
-    const r = await fetch(url, { method: 'POST', credentials: 'include', body: form });
-    const res = await r.json();
-
-    if (!r.ok) throw new Error(res.detail || 'Upload failed');
-
-    if (res.parse_status === 'no_segments') {
-      toast('No travel details found in that PDF — try forwarding the email instead');
-    } else if (res.parse_status === 'failed') {
-      toast('Could not process PDF: ' + (res.error || 'unknown error'));
-    } else if (res.segments_created > 0) {
-      toast(`✓ Added ${res.segments_created} segment${res.segments_created > 1 ? 's' : ''} from PDF`);
-      await loadTrips();
-      const updated = trips.find(t => t.id === currentTrip.id);
-      if (updated) selectTrip(updated);
-    }
-  } catch(e) {
-    toast('PDF upload failed [ERR13]: ' + e.message);
-    console.error('[ERR13]', e);
-  } finally {
-    if (prog) { prog.textContent = ''; prog.style.display = 'none'; }
-    document.getElementById('pdfFileInput').value = '';
-  }
+  const ok = await uploadPdfCore(file, prog);
+  if (prog) { prog.textContent = ''; prog.style.display = 'none'; }
+  document.getElementById('pdfFileInput').value = '';
+  if (ok) await _refreshAfterUpload();
 }
 
-
-// ── Image Upload ──────────────────────────────────────────────────────────────
 const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
 
 function triggerImageUpload() {
@@ -2675,45 +2712,120 @@ async function handleImageFiles(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
   if (!currentTrip) { toast('Select a trip first'); return; }
-
   const bad = files.find(f => !IMAGE_EXT_RE.test(f.name));
   if (bad) { toast(`Please select image files only (jpg/png/webp/gif/heic) — "${bad.name}" isn't one`); return; }
   if (files.length > 6) { toast('Maximum 6 images per upload'); return; }
+  const prog = document.getElementById('pdfProgress');
+  const ok = await uploadImagesCore(files, prog);
+  if (prog) { prog.textContent = ''; prog.style.display = 'none'; }
+  document.getElementById('imageFileInput').value = '';
+  if (ok) await _refreshAfterUpload();
+}
+
+
+// ── Unified attach: one control for type / drop / paste / browse ──────────────
+// Classifies a raw file list into pdfs/images/rejected purely on name+mime —
+// no side effects — so the routing logic is easy to reason about (and unit-test).
+function classifyAttachFiles(fileList) {
+  const files = Array.from(fileList || []);
+  const pdfs = [], images = [], rejected = [];
+  for (const f of files) {
+    const name = (f.name || '').toLowerCase();
+    const type = (f.type || '').toLowerCase();
+    if (name.endsWith('.pdf') || type === 'application/pdf') {
+      pdfs.push(f);
+    } else if (IMAGE_EXT_RE.test(name) || type.startsWith('image/')) {
+      images.push(f);
+    } else {
+      rejected.push(f);
+    }
+  }
+  return {pdfs, images, rejected};
+}
+
+function triggerAttachUpload() {
+  if (!currentTrip) { toast('Select a trip first'); return; }
+  document.getElementById('attachFileInput').click();
+}
+
+async function handleAttachFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (!currentTrip) { toast('Select a trip first'); return; }
+
+  const {pdfs, images, rejected} = classifyAttachFiles(files);
+
+  if (rejected.length) {
+    toast(`Skipped ${rejected.length} file${rejected.length > 1 ? 's' : ''} — only PDF and image files are supported`);
+  }
+  if (!pdfs.length && !images.length) {
+    document.getElementById('attachFileInput').value = '';
+    return;
+  }
+  if (images.length > 6) {
+    toast('Maximum 6 images per upload — using the first 6');
+    images.length = 6;
+  }
 
   const prog = document.getElementById('pdfProgress');
-  if (prog) {
-    prog.style.display = 'block';
-    prog.textContent = files.length === 1 ? `Parsing ${files[0].name}…` : `Parsing ${files.length} images…`;
+  let anyOk = false;
+
+  // Sequential, not parallel: keeps the progress text readable and avoids
+  // hammering the ingest API if someone drops a big mixed batch at once.
+  for (const pdf of pdfs) {
+    if (await uploadPdfCore(pdf, prog)) anyOk = true;
+  }
+  if (images.length) {
+    if (await uploadImagesCore(images, prog)) anyOk = true;
   }
 
-  try {
-    const form = new FormData();
-    files.forEach(f => form.append('files', f));
-
-    const url = `${API}/api/emails/upload-image?trip_id=${encodeURIComponent(currentTrip.id)}`;
-    const r = await fetch(url, { method: 'POST', credentials: 'include', body: form });
-    const res = await r.json();
-
-    if (!r.ok) throw new Error(res.detail || 'Upload failed');
-
-    if (res.parse_status === 'no_segments') {
-      toast('No travel details found in that image — try a clearer photo or forward the email instead');
-    } else if (res.parse_status === 'failed') {
-      toast('Could not process image: ' + (res.error || 'unknown error'));
-    } else if (res.segments_created > 0) {
-      toast(`✓ Added ${res.segments_created} segment${res.segments_created > 1 ? 's' : ''} from photo`);
-      await loadTrips();
-      const updated = trips.find(t => t.id === currentTrip.id);
-      if (updated) selectTrip(updated);
-    }
-  } catch(e) {
-    toast('Image upload failed [ERR14]: ' + e.message);
-    console.error('[ERR14]', e);
-  } finally {
-    if (prog) { prog.textContent = ''; prog.style.display = 'none'; }
-    document.getElementById('imageFileInput').value = '';
-  }
+  if (prog) { prog.textContent = ''; prog.style.display = 'none'; }
+  document.getElementById('attachFileInput').value = '';
+  if (anyOk) await _refreshAfterUpload();
 }
+
+// Drag-and-drop anywhere on the nl-bar; paste anywhere in its text input.
+(function wireAttachDropAndPaste() {
+  const bar = document.getElementById('nlBar');
+  const input = document.getElementById('nlInput');
+  if (!bar || !input) return;
+
+  let dragDepth = 0; // dragenter/dragleave fire on every child — count to avoid flicker
+  bar.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragDepth++;
+    bar.classList.add('drag-over');
+  });
+  bar.addEventListener('dragover', (e) => e.preventDefault());
+  bar.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) bar.classList.remove('drag-over');
+  });
+  bar.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragDepth = 0;
+    bar.classList.remove('drag-over');
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      handleAttachFiles(e.dataTransfer.files);
+    }
+  });
+
+  input.addEventListener('paste', (e) => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault(); // a pasted image has no useful text form anyway
+      handleAttachFiles(files);
+    }
+  });
+})();
 
 
 // ── Calendar subscription ─────────────────────────────────────────────────────
@@ -2762,8 +2874,7 @@ async function selectTrip(trip) {
   if (location.pathname !== tripPath) history.pushState({}, '', tripPath);
   const etb = document.getElementById('editTripBtn'); if (etb) etb.style.display = 'inline-flex';
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'inline-flex';
-  const upb = document.getElementById('tripUploadPdfBtn'); if (upb) upb.style.display = 'inline-flex';
-  const uib = document.getElementById('tripUploadImgBtn'); if (uib) uib.style.display = 'inline-flex';
+  const atb = document.getElementById('tripAttachBtn'); if (atb) atb.style.display = 'inline-flex';
   if (document.activeElement) document.activeElement.blur();
   closeInbox(); closeProfile(); _showMainContent();
   if (window.innerWidth <= 700) closeSidebar();
