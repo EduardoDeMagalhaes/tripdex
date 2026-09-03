@@ -1184,8 +1184,37 @@ async function boot() {
   await loadTrips();
   await loadOrphans();
   await loadUsageWidget();
+  route();
+}
+
+// ── ROUTING ──────────────────────────────────────────────────────────────────
+// Real URLs per page: '/', '/trip/<id>', '/inbox', '/profile', '/settings'.
+// route() dispatches the current location.pathname to the right view — called
+// once on boot (after trips are loaded) and again on every back/forward via
+// popstate. Each open*()/selectTrip() only pushes a new history entry when the
+// URL would actually change, so calling them from route() (URL already correct)
+// never creates a duplicate entry.
+function route() {
+  const path = location.pathname;
+  if (path === '/inbox') { openInbox(); return; }
+  if (path === '/profile') { openProfile(); return; }
+  if (path === '/settings') { openSettings(); return; }
+  const m = path.match(/^\/trip\/([^/]+)\/?$/);
+  if (m) {
+    const trip = trips.find(t => t.id === m[1]);
+    if (trip) { selectTrip(trip); return; }
+    // Unknown/stale trip id (bad link, or trip deleted) — fall back to Home.
+    history.replaceState({}, '', '/');
+    openHomeView();
+    return;
+  }
+  if (path === '/' ) { openHomeView(); return; }
+  // Unknown path entirely — fall back to Home rather than a blank page.
+  history.replaceState({}, '', '/');
   openHomeView();
 }
+
+window.addEventListener('popstate', route);
 
 // ── AUTH UI ───────────────────────────────────────────────────
 function showAuthScreen()  { document.getElementById('authScreen').style.display = 'flex'; }
@@ -1355,6 +1384,7 @@ async function loadUsageWidget() { /* moved to admin panel */ }
 // ── PROFILE PAGE ──────────────────────────────────────────────────────────────
 function openProfile() {
   currentTrip = null;
+  if (location.pathname !== '/profile') history.pushState({}, '', '/profile');
   closeSidebar();
   closeInbox();
   closeSettings();
@@ -2062,8 +2092,16 @@ function renderInboxBadge() {
 
 function openInbox() {
   currentTrip = null;
+  if (location.pathname !== '/inbox') history.pushState({}, '', '/inbox');
   closeSidebar();
   closeProfile();
+  closeSettings();
+  closeFolderView();
+  closeHomeView();
+  const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
+  const etb4 = document.getElementById('editTripBtn'); if (etb4) etb4.style.display = 'none';
+  const upb4 = document.getElementById('tripUploadPdfBtn'); if (upb4) upb4.style.display = 'none';
+  const uib4 = document.getElementById('tripUploadImgBtn'); if (uib4) uib4.style.display = 'none';
   ['tripBar','nlBar','statusBar','timeline'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -2238,6 +2276,7 @@ applyTheme(getTheme());
 
 function openSettings() {
   currentTrip = null;
+  if (location.pathname !== '/settings') history.pushState({}, '', '/settings');
   closeSidebar();
   closeInbox();
   closeProfile();
@@ -2294,6 +2333,7 @@ function renderSettingsPage(container) {
 // ── HOME SCREEN ──────────────────────────────────────────────
 function openHomeView() {
   currentTrip = null;
+  if (location.pathname !== '/') history.pushState({}, '', '/');
   const etb = document.getElementById('editTripBtn'); if (etb) etb.style.display = 'none';
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'none';
   const upb = document.getElementById('tripUploadPdfBtn'); if (upb) upb.style.display = 'none';
@@ -2718,6 +2758,8 @@ function closeSidebar() {
 
 async function selectTrip(trip) {
   if (!trip) return;
+  const tripPath = `/trip/${trip.id}`;
+  if (location.pathname !== tripPath) history.pushState({}, '', tripPath);
   const etb = document.getElementById('editTripBtn'); if (etb) etb.style.display = 'inline-flex';
   const asb = document.getElementById('addSegBtn'); if (asb) asb.style.display = 'inline-flex';
   const upb = document.getElementById('tripUploadPdfBtn'); if (upb) upb.style.display = 'inline-flex';
