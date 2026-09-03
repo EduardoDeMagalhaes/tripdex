@@ -664,7 +664,7 @@ def get_review_emails(db: Session = Depends(get_db)):
 
 
 def _last(s): return s.strip().split()[-1] if s and s.strip() else None
-def _dt(s): return s if s and "T" in str(s) else (s if s else None)
+def _norm_dt(s): return s if s and "T" in str(s) else (s if s else None)
 
 def normalise_segments(raw):
     out = []
@@ -674,9 +674,9 @@ def normalise_segments(raw):
         n["destination"] = s.get("destination") or _last(s.get("arrival_airport", ""))
         n["carrier"] = s.get("carrier") or s.get("airline") or s.get("flight_number")
         n["flight_iata"] = s.get("flight_iata") or s.get("flight_number")
-        n["departs_at"] = _dt(s.get("departs_at") or s.get("departure_time"))
+        n["departs_at"] = _norm_dt(s.get("departs_at") or s.get("departure_time"))
         n["departs_tz"] = s.get("departs_tz") or s.get("departure_timezone")
-        n["arrives_at"] = _dt(s.get("arrives_at") or s.get("arrival_time"))
+        n["arrives_at"] = _norm_dt(s.get("arrives_at") or s.get("arrival_time"))
         n["arrives_tz"] = s.get("arrives_tz") or s.get("arrival_timezone")
         n["confirmation_ref"] = s.get("confirmation_ref") or s.get("reference") or s.get("booking_ref")
         out.append(n)
