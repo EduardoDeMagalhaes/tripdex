@@ -32,6 +32,14 @@ def _now():
     return datetime.now(timezone.utc)
 
 
+def _expiry_cutoff_for_issued_within(delta: timedelta) -> str:
+    """email_tokens has no created_at column — only expires_at, with a fixed
+    TOKEN_TTL_HOURS lifetime. So 'issued within `delta`' == 'expires_at is still
+    at least (TOKEN_TTL_HOURS - delta) away', i.e. expires_at > now + TTL - delta.
+    Used instead of a schema migration for the rate-limit checks below."""
+    return (_now() + timedelta(hours=TOKEN_TTL_HOURS) - delta).isoformat()
+
+
 def _issue_token(db: Session, user_id: str, source_email_id: str) -> str:
     tok = uuid.uuid4().hex + uuid.uuid4().hex
     expires = (_now() + timedelta(hours=TOKEN_TTL_HOURS)).isoformat()
@@ -80,13 +88,13 @@ def _send_verification(to: str, token: str):
 
 def _check_resend_limits(db: Session, source_email_id: str):
     """Raise 429 if cooldown or daily cap exceeded."""
-    cutoff_hour  = (_now() - timedelta(minutes=RESEND_COOLDOWN_M)).isoformat()
-    cutoff_day   = (_now() - timedelta(hours=24)).isoformat()
+    cutoff_hour  = _expiry_cutoff_for_issued_within(timedelta(minutes=RESEND_COOLDOWN_M))
+    cutoff_day   = _expiry_cutoff_for_issued_within(timedelta(hours=24))
 
     # Per-address cooldown
     recent = db.execute(text(
         "SELECT COUNT(*) FROM email_tokens "
-        "WHERE meta=:sid AND type='verify_source' AND created_at > :cutoff"
+        "WHERE meta=:sid AND type='verify_source' AND expires_at > :cutoff"
     ), {"sid": source_email_id, "cutoff": cutoff_hour}).scalar()
     if recent and recent > 0:
         raise HTTPException(429, f"Please wait {RESEND_COOLDOWN_M} minutes before resending.")
@@ -94,7 +102,7 @@ def _check_resend_limits(db: Session, source_email_id: str):
     # Global daily cap (all verify_source tokens)
     daily = db.execute(text(
         "SELECT COUNT(*) FROM email_tokens "
-        "WHERE type='verify_source' AND created_at > :cutoff"
+        "WHERE type='verify_source' AND expires_at > :cutoff"
     ), {"cutoff": cutoff_day}).scalar()
     if daily and daily >= RESEND_DAILY_MAX:
         raise HTTPException(429, "Daily verification limit reached. Try again tomorrow.")
@@ -119,6 +127,13 @@ class AddSourceEmailBody(BaseModel):
 def add_source_email(body: AddSourceEmailBody, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     addr = body.email.lower().strip()
 
+    # It's the caller's own account email — safe to say so specifically (unlike the
+    # generic cases below, this can't leak whether some OTHER email is registered).
+    # It's also not a mistake to try: this address already works for ingest via the
+    # primary-email check in lookup_user_by_email(), it just never needed a row here.
+    if addr == (user.get("email") or "").lower():
+        raise HTTPException(409, "That's your account's primary email — bookings from it are already routed here automatically, no need to add it separately.")
+
     # Block if already confirmed anywhere
     existing_confirmed = db.execute(text(
         "SELECT id FROM user_source_emails WHERE LOWER(email)=:email AND status='confirmed'"
@@ -141,9 +156,9 @@ def add_source_email(body: AddSourceEmailBody, db: Session = Depends(get_db), us
         raise HTTPException(409, "You already have this email address (pending or confirmed).")
 
     # Check global daily cap before creating
-    cutoff_day = (_now() - timedelta(hours=24)).isoformat()
+    cutoff_day = _expiry_cutoff_for_issued_within(timedelta(hours=24))
     daily = db.execute(text(
-        "SELECT COUNT(*) FROM email_tokens WHERE type='verify_source' AND created_at > :cutoff"
+        "SELECT COUNT(*) FROM email_tokens WHERE type='verify_source' AND expires_at > :cutoff"
     ), {"cutoff": cutoff_day}).scalar()
     if daily and daily >= RESEND_DAILY_MAX:
         raise HTTPException(429, "Daily verification limit reached. Try again tomorrow.")

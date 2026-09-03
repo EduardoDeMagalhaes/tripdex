@@ -1486,7 +1486,9 @@ function renderProfilePage(container) {
         <p style="font-size:13px;color:var(--ink3);margin:0 0 16px;line-height:1.6;">
           Forward booking confirmations from any of these addresses to
           <strong style="color:var(--ink2)">waypoint@emdm.ch</strong> and they'll
-          be routed to your account automatically.
+          be routed to your account automatically. Your account's own login email
+          always works and doesn't need to be added — use this list for additional
+          addresses, like a work inbox or a shared family email.
         </p>
         <div id="sourceEmailList" class="source-email-list">
           <div style="font-size:13px;color:var(--ink4)">Loading…</div>
@@ -1528,15 +1530,24 @@ function profAnchorClick(e, section) {
 async function loadSourceEmails() {
   const list = document.getElementById('sourceEmailList');
   if (!list) return;
+  // Your login email always works for ingest (checked directly against the account
+  // on the backend) — it's never stored as a row in user_source_emails, so without
+  // this it looked like nothing was configured at all. Show it, always, pinned first.
+  const primaryRow = currentUser && currentUser.email ? `
+      <div class="source-email-row" data-primary="1">
+        <span class="source-email-addr">${currentUser.email}</span>
+        <span class="source-email-badge confirmed">Primary</span>
+        <span style="font-size:12px;color:var(--ink4);margin-left:4px">Always allowed — no action needed</span>
+      </div>` : '';
   try {
     const r = await fetch(`${API}/api/source-emails`, {credentials:'include', headers:H});
     if (!r.ok) throw new Error(await r.text());
     const emails = await r.json();
     if (!emails.length) {
-      list.innerHTML = '<div style="font-size:13px;color:var(--ink4)">No source emails added yet.</div>';
+      list.innerHTML = primaryRow + '<div style="font-size:13px;color:var(--ink4);margin-top:8px">No additional source emails added yet.</div>';
       return;
     }
-    list.innerHTML = emails.map(se => `
+    list.innerHTML = primaryRow + emails.map(se => `
       <div class="source-email-row" data-id="${se.id}">
         <span class="source-email-addr">${se.email}</span>
         <span class="source-email-badge ${se.status === 'confirmed' ? 'confirmed' : 'pending'}">
@@ -1546,7 +1557,7 @@ async function loadSourceEmails() {
         <button class="source-email-btn remove" onclick="removeSourceEmail('${se.id}',this)">Remove</button>
       </div>`).join('');
   } catch(e) {
-    if (list) list.innerHTML = '<div style="font-size:13px;color:var(--ink4)">Could not load source emails.</div>';
+    if (list) list.innerHTML = primaryRow + '<div style="font-size:13px;color:var(--ink4);margin-top:8px">Could not load additional source emails.</div>';
   }
 }
 
