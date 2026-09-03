@@ -76,6 +76,14 @@ async def auth_middleware(request: Request, call_next):
     if path.endswith(".ics") or path.endswith("/calendar-token"):
         return await call_next(request)
 
+    # Email-link-clicked, token-in-the-URL endpoints — "no session required, the
+    # token IS the auth" by design (source-email confirmation, orphan-segment
+    # one-click assignment). These are opened straight from an email client with
+    # no wp_session cookie, so they must be reachable without one; each verifies
+    # its own token server-side before doing anything.
+    if path == "/api/source-emails/verify" or path.startswith("/api/emails/resolve/"):
+        return await call_next(request)
+
     from fastapi.responses import JSONResponse
 
     # Check session cookie first

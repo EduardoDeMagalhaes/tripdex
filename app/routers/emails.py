@@ -501,18 +501,34 @@ def get_orphans(db: Session = Depends(get_db), user: dict = Depends(get_current_
     return [dict(r) for r in rows]
 
 
-@router.post("/resolve/{token}")
+def _resolve_error_page(title: str, msg: str):
+    return HTMLResponse(f"""<!DOCTYPE html><html><head><meta charset=utf-8>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{{font-family:Georgia,serif;background:#f5f0e8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}}
+.card{{background:#fff;border-radius:12px;padding:40px 32px;max-width:380px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,.08)}}
+h2{{margin:0 0 12px;font-size:22px;color:#c62828}} p{{color:#6b635a;line-height:1.6;margin:0 0 24px}}
+a{{display:inline-block;background:#b5651d;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:15px}}</style>
+</head><body><div class="card">
+<div style="font-size:32px;margin-bottom:16px">✦</div>
+<h2>{title}</h2><p>{msg}</p>
+<a href="{FRONTEND_URL}">Open Waypoint</a>
+</div></body></html>""")
+
+
+@router.get("/resolve/{token}")
 def resolve_assignment(token: str, db: Session = Depends(get_db)):
     """
     One-click resolve: assign orphan segments to a trip (or create one).
-    No auth required — the token IS the auth.
+    No auth required — the token IS the auth. GET because this is a plain
+    <a href> link clicked from an email client, not a fetch() call.
     """
 
     row = db.execute(_text(
         "SELECT * FROM email_tokens WHERE token=:tok AND type='assign' AND used_at IS NULL"
     ), {"tok": token}).mappings().fetchone()
     if not row:
-        return {"ok": False, "error": "Invalid or already used link"}
+        return _resolve_error_page("Invalid or expired link",
+            "This assignment link has already been used or is no longer valid.")
 
     meta = _json.loads(row["meta"] or "{}")
     seg_ids  = meta.get("segment_ids", [])
@@ -529,7 +545,8 @@ def resolve_assignment(token: str, db: Session = Depends(get_db)):
     else:
         trip_obj = db.query(Trip).filter(Trip.id == trip_id).first()
         if not trip_obj:
-            return {"ok": False, "error": "Trip not found"}
+            return _resolve_error_page("Trip not found",
+                "The trip this link points to no longer exists.")
 
     # Assign segments
     now = _dt.now(_tz.utc).isoformat()
