@@ -1,16 +1,16 @@
 # Tripdex — Project Backlog & Context
 
 ## Development workflow
-- **All new features go to test first** (`test.tripdex.emdm.ch`, port 8001, service: `waypoint-test`)
-- Eduardo tests and approves → then promote to live (`tripdex.emdm.ch`, port 8000, service: `waypoint`)
+- **All new features go to test first** (`test.tripdex.emdm.ch`, port 8001, service: `tripdex-test`)
+- Eduardo tests and approves → then promote to live (`tripdex.emdm.ch`, port 8000, service: `tripdex`)
 - Never implement new features directly on live
 - This rule applies to all emdm.ch projects
 
 ## Quick context for new sessions
 - **Server**: Hetzner CX22, `178.104.227.162`, Ubuntu 24.04, user `eduardo`
-- **App**: `/home/eduardo/waypoint/` — FastAPI + SQLite + OpenAI GPT-4o
-- **Frontend**: `/home/eduardo/waypoint/static/index.html` — vanilla JS, single file
-- **Service**: `sudo systemctl restart waypoint` — runs on `localhost:8000`
+- **App**: `/home/eduardo/tripdex/` — FastAPI + SQLite + OpenAI GPT-4o
+- **Frontend**: `/home/eduardo/tripdex/static/index.html` — vanilla JS, single file
+- **Service**: `sudo systemctl restart tripdex` — runs on `localhost:8000`
 - **Domain**: `emdm.ch` via Nginx reverse proxy
 - **Keys**: `.env` file has `OPENAI_API_KEY`, `AVIATIONSTACK_KEY`, `SECRET_TOKEN`, `ADMIN_EMAIL`
 - **Stack**: Python venv at `venv/`, logs at `logs/dialog.log`
@@ -113,7 +113,7 @@ Next free: **ERR16**
 
 ### 13. Avatar system ✅ DONE (2026-05-29)
 - 8 default SVG avatars: train, plane, bag, passport, compass, camera, bell, globe
-  warm terracotta/beige palette, at `/home/eduardo/waypoint/static/avatars/defaults/`
+  warm terracotta/beige palette, at `/home/eduardo/tripdex/static/avatars/defaults/`
 - Random default assigned once at registration
 - `POST /api/auth/avatar` — upload custom photo (Pillow 128×128 crop+resize)
 - `POST /api/auth/avatar/pick` — switch to any default by name

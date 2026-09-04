@@ -134,8 +134,8 @@ def _send_feedback_email(fb_id, short_id, fb_type, title, description, context,
         f"Report ID: {short_id}\n\n"
         f"Please:\n"
         f"1. Connect to emdm.ch via SSH MCP\n"
-        f"2. Pull the report: SELECT * FROM feedback WHERE short_id='{short_id}' in /home/eduardo/waypoint/tripdex.db\n"
-        f"3. Read the backlog at /home/eduardo/waypoint/BACKLOG.md\n"
+        f"2. Pull the report: SELECT * FROM feedback WHERE short_id='{short_id}' in /home/eduardo/tripdex/tripdex.db\n"
+        f"3. Read the backlog at /home/eduardo/tripdex/BACKLOG.md\n"
         f"4. Compare and recommend: ignore / amend / new backlog item + priority"
     )
 
@@ -149,10 +149,10 @@ def _send_feedback_email(fb_id, short_id, fb_type, title, description, context,
         f"Report ID: **{short_id}**\n\n"
         f"Please:\n"
         f"1. Connect to the emdm.ch server via SSH MCP\n"
-        f"2. Run: `python3 -c \"import sqlite3; con=sqlite3.connect('/home/eduardo/waypoint/tripdex.db'); "
+        f"2. Run: `python3 -c \"import sqlite3; con=sqlite3.connect('/home/eduardo/tripdex/tripdex.db'); "
         f"row=con.execute(\'SELECT short_id,type,title,description,context,status,created_at,username FROM feedback WHERE short_id=\'\'{short_id}\'\'\').fetchone(); "
         f"print(row); con.close()\"` \n"
-        f"3. Read the current backlog at `/home/eduardo/waypoint/BACKLOG.md`\n"
+        f"3. Read the current backlog at `/home/eduardo/tripdex/BACKLOG.md`\n"
         f"4. Compare the report to the backlog and tell me:\n"
         f"   - Is this a known issue or duplicate?\n"
         f"   - Suggested priority (low / medium / high / critical)\n"

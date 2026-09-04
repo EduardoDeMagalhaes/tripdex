@@ -4,8 +4,8 @@ Postfix pipe script for travel@emdm.ch
 Receives raw email on stdin, extracts text + PDFs, calls /api/emails/ingest.
 
 Install:
-  chmod +x /home/eduardo/waypoint/parse_email.py
-  Add to /etc/aliases:  travel: "|/home/eduardo/waypoint/parse_email.py"
+  chmod +x /home/eduardo/tripdex/parse_email.py
+  Add to /etc/aliases:  travel: "|/home/eduardo/tripdex/parse_email.py"
   Run: newaliases
 """
 
@@ -25,7 +25,7 @@ import base64
 API_URL   = "http://localhost:8000/api/emails/ingest"
 API_TOKEN = "d5f9e9b215da795ef927a399c3eba355"
 LOG_FILE  = "/var/log/waypoint-email.log"
-VENV_SITE = "/home/eduardo/waypoint/venv/lib/python3.12/site-packages"
+VENV_SITE = "/home/eduardo/tripdex/venv/lib/python3.12/site-packages"
 MAX_IMAGES         = 6                 # cap per email — GPT-4o cost/latency guard
 MAX_IMAGE_BYTES     = 15 * 1024 * 1024  # 15MB per image (post-HEIC-conversion), matches nginx client_max_body_size elsewhere
 IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
