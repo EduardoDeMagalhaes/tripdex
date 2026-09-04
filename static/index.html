@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Waypoint</title>
+<title>Tripdex</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -744,7 +744,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
   <div style="display:flex;align-items:center;gap:10px">
     <button class="btn btn-ghost btn-sm" id="mobMenuBtn" onclick="toggleSidebar()"
       style="display:none;font-size:18px;padding:2px 8px">☰</button>
-    <div class="logo" onclick="openHomeView()" style="cursor:pointer" title="Home"><div class="logo-dot"></div>Waypoint</div>
+    <div class="logo" onclick="openHomeView()" style="cursor:pointer" title="Home"><div class="logo-dot"></div>Tripdex</div>
   </div>
   <div class="hdr-right" id="hdrUser">
     <div id="hdrAvatar" class="avatar" style="display:none" onclick="openProfile()" title="Profile"></div>
@@ -1085,7 +1085,7 @@ body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height
       <div class="cal-hint" style="margin-top:4px;padding-top:14px;border-top:1px solid var(--paper3)">
         <strong>How to subscribe:</strong> Click <em>Open</em> to add directly in Apple Calendar or Outlook.
         In Google Calendar: Other calendars → + → From URL → paste the link.
-        Waypoint will refresh the feed every hour.
+        Tripdex will refresh the feed every hour.
       </div>
     </div>
     <div class="modal-footer">
@@ -1485,7 +1485,7 @@ function renderProfilePage(container) {
         <div class="profile-section-title">Source emails</div>
         <p style="font-size:13px;color:var(--ink3);margin:0 0 16px;line-height:1.6;">
           Forward booking confirmations from any of these addresses to
-          <strong style="color:var(--ink2)">waypoint@emdm.ch</strong> and they'll
+          <strong style="color:var(--ink2)">tripdex@emdm.ch</strong> and they'll
           be routed to your account automatically. Your account's own login email
           always works and doesn't need to be added — use this list for additional
           addresses, like a work inbox or a shared family email.
@@ -2449,7 +2449,7 @@ function renderHome(container) {
     <div class="home-email-tip">
       <span>📬</span>
       <span>Forward booking emails to</span>
-      <span class="home-email-addr" title="Click to copy" onclick="copyEmailAddr(this)">waypoint@emdm.ch</span>
+      <span class="home-email-addr" title="Click to copy" onclick="copyEmailAddr(this)">tripdex@emdm.ch</span>
       <span style="margin-left:auto;font-size:11px;color:var(--ink4)">and they'll appear in Inbox</span>
     </div>
 
@@ -2473,7 +2473,7 @@ function homeSubtitle(upcoming, past) {
   return `${past.length} past trip${past.length===1?'':'s'}`;
 }
 function copyEmailAddr(el) {
-  navigator.clipboard.writeText('waypoint@emdm.ch').then(() => {
+  navigator.clipboard.writeText('tripdex@emdm.ch').then(() => {
     const orig = el.textContent;
     el.textContent = 'Copied!';
     setTimeout(() => el.textContent = orig, 1500);
@@ -2625,8 +2625,8 @@ function appendStuckCard(message) {
   card.innerHTML = `
     <p>${msg}</p>
     <div class="stuck-actions">
-      <a class="stuck-btn primary" href="mailto:waypoint@emdm.ch?subject=Bug+report&body=What+I+tried+to+do:%0A%0AWhat+happened:%0A%0ABrowser:" target="_blank">🐛 Report a bug</a>
-      <a class="stuck-btn" href="mailto:waypoint@emdm.ch?subject=Feature+request&body=What+I'd+like+Waypoint+to+do:" target="_blank">✦ Request a feature</a>
+      <a class="stuck-btn primary" href="mailto:tripdex@emdm.ch?subject=Bug+report&body=What+I+tried+to+do:%0A%0AWhat+happened:%0A%0ABrowser:" target="_blank">🐛 Report a bug</a>
+      <a class="stuck-btn" href="mailto:tripdex@emdm.ch?subject=Feature+request&body=What+I'd+like+Tripdex+to+do:" target="_blank">✦ Request a feature</a>
       <button class="stuck-btn" onclick="cancelDialog()">Start over</button>
     </div>`;
   thread.appendChild(card);
@@ -4180,7 +4180,7 @@ async function editAssistSend() {
       const stuckMsg = data.message || "I'm not sure I can help with this edit. Would you like to report it?";
       const stuckEl = document.createElement('div');
       stuckEl.className = 'stuck-card';
-      stuckEl.innerHTML = `<p>${stuckMsg}</p><div class="stuck-actions"><a class="stuck-btn primary" href="mailto:waypoint@emdm.ch?subject=Bug+report" target="_blank">🐛 Report a bug</a><a class="stuck-btn" href="mailto:waypoint@emdm.ch?subject=Feature+request" target="_blank">✦ Request a feature</a></div>`;
+      stuckEl.innerHTML = `<p>${stuckMsg}</p><div class="stuck-actions"><a class="stuck-btn primary" href="mailto:tripdex@emdm.ch?subject=Bug+report" target="_blank">🐛 Report a bug</a><a class="stuck-btn" href="mailto:tripdex@emdm.ch?subject=Feature+request" target="_blank">✦ Request a feature</a></div>`;
       document.querySelector('#editAssistThread')?.appendChild(stuckEl);
     } else {
       _editAssistAddMsg('bot', data.message || 'Done!');
@@ -4375,7 +4375,7 @@ async function tripAssistSend() {
       const tc = document.getElementById('tripAssistThread');
       if (tc) {
         const sc = document.createElement('div'); sc.className='stuck-card';
-        sc.innerHTML=`<p>${d.message||'I got stuck on this one.'}</p><div class="stuck-actions"><a class="stuck-btn primary" href="mailto:waypoint@emdm.ch?subject=Bug+report" target="_blank">🐛 Report a bug</a><a class="stuck-btn" href="mailto:waypoint@emdm.ch?subject=Feature+request" target="_blank">✦ Request a feature</a></div>`; tc.appendChild(sc); tc.scrollTop=tc.scrollHeight;
+        sc.innerHTML=`<p>${d.message||'I got stuck on this one.'}</p><div class="stuck-actions"><a class="stuck-btn primary" href="mailto:tripdex@emdm.ch?subject=Bug+report" target="_blank">🐛 Report a bug</a><a class="stuck-btn" href="mailto:tripdex@emdm.ch?subject=Feature+request" target="_blank">✦ Request a feature</a></div>`; tc.appendChild(sc); tc.scrollTop=tc.scrollHeight;
       }
     } else {
       _tripAssistMsg('bot', d.message);
@@ -4814,7 +4814,7 @@ function checkOverlapGuardrail(type, departsAt, arrivesAt, excludeId, onProceed)
 <!-- ── AUTH SCREEN ─────────────────────────────────────────── -->
 <div class="auth-screen" id="authScreen" style="display:none">
   <div class="auth-card">
-    <div class="auth-logo"><div class="auth-logo-dot"></div>Waypoint</div>
+    <div class="auth-logo"><div class="auth-logo-dot"></div>Tripdex</div>
 
     <!-- LOGIN -->
     <div id="authLogin">

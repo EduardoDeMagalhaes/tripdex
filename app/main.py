@@ -39,7 +39,7 @@ def _run_migrations():
 
 _run_migrations()
 
-app = FastAPI(title="Waypoint", version="0.1.0")
+app = FastAPI(title="Tripdex", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

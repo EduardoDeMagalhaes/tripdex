@@ -1,5 +1,5 @@
 """
-calendar.py — Live ICS calendar subscription feeds for Waypoint.
+calendar.py — Live ICS calendar subscription feeds for Tripdex.
 
 Endpoints:
   GET /api/trips/{trip_id}/calendar.ics?token=<calendar_token>
@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 router = APIRouter(tags=["calendar"])
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://waypoint.emdm.ch")
-PRODID = "-//Waypoint//Travel Itinerary//EN"
+PRODID = "-//Tripdex//Travel Itinerary//EN"
 
 
 # ── ICS helpers ───────────────────────────────────────────────────────────────
@@ -148,8 +148,8 @@ def _build_ics(trip_name: str, segments: list, feed_url: str) -> str:
         f"PRODID:{PRODID}",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        f"X-WR-CALNAME:Waypoint — {_ics_escape(trip_name)}",
-        f"X-WR-CALDESC:Live itinerary from Waypoint",
+        f"X-WR-CALNAME:Tripdex — {_ics_escape(trip_name)}",
+        f"X-WR-CALDESC:Live itinerary from Tripdex",
         f"REFRESH-INTERVAL;VALUE=DURATION:PT1H",
         f"X-PUBLISHED-TTL:PT1H",
         f"SOURCE:{feed_url}",
@@ -289,5 +289,5 @@ def user_calendar_feed(user_token: str, db: Session = Depends(get_db)):
     return PlainTextResponse(
         content=ics,
         media_type="text/calendar; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="waypoint-all-trips.ics"'},
+        headers={"Content-Disposition": 'attachment; filename="tripdex-all-trips.ics"'},
     )

@@ -137,7 +137,7 @@ async def aviationstack_lookup(flight_iata: str, flight_date: str):
 
     if resp.status_code == 403:
         return None, (
-            "Waypoint uses the AviationStack free tier, which only supports live flight lookups "
+            "Tripdex uses the AviationStack free tier, which only supports live flight lookups "
             "— date filtering is a paid feature. Flight times are estimated from what you typed."
         )
     if resp.status_code != 200:
@@ -146,7 +146,7 @@ async def aviationstack_lookup(flight_iata: str, flight_date: str):
     data = resp.json().get("data", [])
     if not data:
         return None, (
-            "No live data found for this flight right now. Waypoint uses the AviationStack free tier, "
+            "No live data found for this flight right now. Tripdex uses the AviationStack free tier, "
             "which only covers currently active flights — future or past flights don't appear. "
             "Flight times are estimated from what you typed."
         )

@@ -14,7 +14,7 @@ import urllib.parse
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["enrich"])
-log = logging.getLogger("waypoint.enrich")
+log = logging.getLogger("tripdex.enrich")
 
 SBB_API = "https://transport.opendata.ch/v1"
 
@@ -159,7 +159,7 @@ async def _enrich_train(seg: Segment) -> dict:
 
 OSM_NOMINATIM = "https://nominatim.openstreetmap.org/search"
 OSM_OVERPASS  = "https://overpass-api.de/api/interpreter"
-OSM_HEADERS   = {"User-Agent": "waypoint-travel-app/1.0 (ed@emdm.ch)"}
+OSM_HEADERS   = {"User-Agent": "tripdex-travel-app/1.0 (ed@emdm.ch)"}
 
 
 async def _nominatim_by_address(address: str, hotel_name: str) -> dict | None:
@@ -536,7 +536,7 @@ async def _enrich_flight(seg: Segment) -> dict:
                     }
         except Exception as _e:
             import logging as _log
-            _log.getLogger("waypoint").warning(f"AeroDataBox error for {flight_iata}/{dep_date}: {_e}")
+            _log.getLogger("tripdex").warning(f"AeroDataBox error for {flight_iata}/{dep_date}: {_e}")
 
     # ── AviationStack fallback (live/today only) ──────────────────────────────
     as_key = _os.getenv("AVIATIONSTACK_KEY")
@@ -576,7 +576,7 @@ async def _enrich_flight(seg: Segment) -> dict:
         }
     except Exception as _e:
         import logging as _log
-        _log.getLogger("waypoint").warning(f"AviationStack error for {flight_iata}: {_e}")
+        _log.getLogger("tripdex").warning(f"AviationStack error for {flight_iata}: {_e}")
         return {**base, "enrich_status": "error", "flight_iata": flight_iata,
                 "enrich_error": str(_e)}
 
@@ -761,7 +761,7 @@ async def search_connections(
     # First resolve station names to IDs (handles German stations too)
     async def resolve(name):
         try:
-            async with httpx.AsyncClient(timeout=6, headers={"User-Agent": "waypoint/1.0"}) as c:
+            async with httpx.AsyncClient(timeout=6, headers={"User-Agent": "tripdex/1.0"}) as c:
                 r = await c.get(f"{TRANSPORT_API}/locations",
                                 params={"query": name, "type": "station"})
                 stations = r.json().get("stations", [])
@@ -812,7 +812,7 @@ async def search_connections(
         params["datetime"] = datetime_str
 
     try:
-        async with httpx.AsyncClient(timeout=10, headers={"User-Agent": "waypoint/1.0"}) as c:
+        async with httpx.AsyncClient(timeout=10, headers={"User-Agent": "tripdex/1.0"}) as c:
             r = await c.get(f"{TRANSPORT_API}/connections", params=params)
             r.raise_for_status()
             data = r.json()
@@ -946,7 +946,7 @@ async def _search_oebb(
     Covers Austria + cross-border routes into Germany and Italy.
     Returns same shape as _search_db_vendo / transport.opendata.ch results.
     """
-    headers = {"User-Agent": "waypoint/1.0 trip.helper@emdm.ch", "Accept": "application/json"}
+    headers = {"User-Agent": "tripdex/1.0 trip.helper@emdm.ch", "Accept": "application/json"}
 
     async def resolve_oebb(name: str) -> dict | None:
         try:
@@ -1109,7 +1109,7 @@ async def _search_db_vendo(
     Returns a list of connection dicts (same shape as transport.opendata.ch results)
     or an empty list on any error.
     """
-    headers = {"User-Agent": "waypoint/1.0", "Accept": "application/json"}
+    headers = {"User-Agent": "tripdex/1.0", "Accept": "application/json"}
 
     async def resolve_db(name: str) -> dict | None:
         try:

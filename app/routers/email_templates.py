@@ -1,5 +1,5 @@
 """
-email_templates.py — All branded email sending functions for Waypoint.
+email_templates.py — All branded email sending functions for Tripdex.
 Standalone — no circular imports. Imported by auth.py and emails.py.
 """
 import os, smtplib
@@ -13,7 +13,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "https://waypoint.emdm.ch")
 def send_email(to: str, subject: str, html: str, text: str):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"]    = f"Waypoint <{FROM_EMAIL}>"
+    msg["From"]    = f"Tripdex <{FROM_EMAIL}>"
     msg["To"]      = to
     msg.attach(MIMEText(text, "plain"))
     msg.attach(MIMEText(html, "html"))
@@ -22,7 +22,7 @@ def send_email(to: str, subject: str, html: str, text: str):
 
 
 def _email_template(heading: str, body_html: str, cta_url: str, cta_label: str, footnote: str) -> str:
-    """Branded HTML email — Waypoint visual identity."""
+    """Branded HTML email — Tripdex visual identity."""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -33,7 +33,7 @@ def _email_template(heading: str, body_html: str, cta_url: str, cta_label: str, 
 <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
   <tr><td style="padding-bottom:24px;text-align:center;">
     <span style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a1814;letter-spacing:.5px;">
-      &#10022; Waypoint
+      &#10022; Tripdex
     </span>
   </td></tr>
   <tr><td style="background:#f5f0e8;border-radius:12px;padding:40px 36px;box-shadow:0 2px 8px rgba(0,0,0,.08);">
@@ -55,7 +55,7 @@ def _email_template(heading: str, body_html: str, cta_url: str, cta_label: str, 
     <p style="margin:0;font-size:12px;color:#8a847c;line-height:1.6;">{footnote}</p>
   </td></tr>
   <tr><td style="padding-top:24px;text-align:center;">
-    <p style="margin:0;font-size:11px;color:#c4bdb4;">Waypoint &middot; trip.helper@emdm.ch</p>
+    <p style="margin:0;font-size:11px;color:#c4bdb4;">Tripdex &middot; trip.helper@emdm.ch</p>
   </td></tr>
 </table>
 </td></tr>
@@ -65,19 +65,19 @@ def _email_template(heading: str, body_html: str, cta_url: str, cta_label: str, 
 
 def send_verification_email(to: str, username: str, token: str):
     link = f"{FRONTEND_URL}/api/auth/verify-email?token={token}"
-    subject = "Confirm your Waypoint account"
+    subject = "Confirm your Tripdex account"
     text = (
         f"Hi {username},\n\n"
-        f"Please confirm your email address to activate your Waypoint account:\n{link}\n\n"
+        f"Please confirm your email address to activate your Tripdex account:\n{link}\n\n"
         f"This link expires in 24 hours. If you didn't register, you can safely ignore this email.\n\n"
-        f"— Waypoint"
+        f"— Tripdex"
     )
     body = (
         f"<p style=\"margin:0 0 16px;font-size:16px;color:#4a4540;line-height:1.6;\">"
         f"  Hi <strong style=\"color:#1a1814\">{username}</strong>,"
         f"</p>"
         "<p style=\"margin:0;font-size:15px;color:#4a4540;line-height:1.7;\">"
-        "  Welcome to Waypoint. Click below to confirm your email address"
+        "  Welcome to Tripdex. Click below to confirm your email address"
         "  and activate your account."
         "</p>"
     )
@@ -86,26 +86,26 @@ def send_verification_email(to: str, username: str, token: str):
         body_html=body,
         cta_url=link,
         cta_label="Confirm email address",
-        footnote="This link expires in 24 hours. If you didn't create a Waypoint account, you can safely ignore this email."
+        footnote="This link expires in 24 hours. If you didn't create a Tripdex account, you can safely ignore this email."
     )
     send_email(to, subject, html, text)
 
 def send_reset_email(to: str, username: str, token: str):
     link = f"{FRONTEND_URL}/reset-password?token={token}"
-    subject = "Reset your Waypoint password"
+    subject = "Reset your Tripdex password"
     text = (
         f"Hi {username},\n\n"
-        f"We received a request to reset the password for your Waypoint account.\n\n"
+        f"We received a request to reset the password for your Tripdex account.\n\n"
         f"Reset your password here:\n{link}\n\n"
         f"This link expires in 1 hour. If you didn't request this, you can safely ignore this email.\n\n"
-        f"— Waypoint"
+        f"— Tripdex"
     )
     body = (
         f"<p style=\"margin:0 0 16px;font-size:16px;color:#4a4540;line-height:1.6;\">"
         f"  Hi <strong style=\"color:#1a1814\">{username}</strong>,"
         f"</p>"
         "<p style=\"margin:0;font-size:15px;color:#4a4540;line-height:1.7;\">"
-        "  We received a request to reset the password for your Waypoint account."
+        "  We received a request to reset the password for your Tripdex account."
         "  Click below to choose a new password."
         "</p>"
     )
@@ -205,36 +205,36 @@ def send_assignment_email(to: str, subject: str, segments_data: list, trips_and_
         "We parsed your forwarded email but weren't sure which trip to add it to.\n\n" +
         "Tap one of the links below to assign the segments:\n\n" +
         btns_plain +
-        f"\n\nOr open Waypoint to manage it manually: {api_url}\n\n\u2014 Waypoint"
+        f"\n\nOr open Tripdex to manage it manually: {api_url}\n\n\u2014 Tripdex"
     )
 
     html = _email_template(
         heading="Where should we add this?",
         body_html=body_html,
         cta_url=api_url,
-        cta_label="Open Waypoint",
+        cta_label="Open Tripdex",
         footnote="Didn't forward this? You can ignore this email.",
     )
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = reply_subject
-        msg["From"]    = f"Waypoint <{FROM_EMAIL}>"
+        msg["From"]    = f"Tripdex <{FROM_EMAIL}>"
         msg["To"]      = to
-        msg["Reply-To"] = "Waypoint <waypoint@emdm.ch>"
+        msg["Reply-To"] = "Tripdex <tripdex@emdm.ch>"
         msg.attach(MIMEText(plain, "plain"))
         msg.attach(MIMEText(html,  "html"))
         with smtplib.SMTP("localhost") as sv:
             sv.sendmail(FROM_EMAIL, [to], msg.as_string())
     except Exception as e:
         import logging
-        logging.getLogger("waypoint").warning(f"Could not send assignment email to {to}: {e}")
+        logging.getLogger("tripdex").warning(f"Could not send assignment email to {to}: {e}")
 
 def send_ingest_reply(to: str, status: str, subject: str,
                       segments_data: list = None, trip_name: str = None,
                       error: str = None, trip_created: bool = False):
-    """Reply to sender summarising what Waypoint did with their forwarded email."""
+    """Reply to sender summarising what Tripdex did with their forwarded email."""
     app_url = FRONTEND_URL
-    reply_subject = f"Re: {subject}" if subject else "Your Waypoint itinerary update"
+    reply_subject = f"Re: {subject}" if subject else "Your Tripdex itinerary update"
 
     if status == "ok" and segments_data:
         count = len(segments_data)
@@ -258,22 +258,22 @@ def send_ingest_reply(to: str, status: str, subject: str,
         )
         body_html = (
             '<p style="margin:0 0 16px;font-size:15px;color:#4a4540;line-height:1.7;">'
-            "We parsed your forwarded email and added the following to Waypoint:"
+            "We parsed your forwarded email and added the following to Tripdex:"
             "</p>"
             + trip_line
             + '<ul style="margin:0 0 8px;padding:0;list-style:none;">'
             + seg_rows + "</ul>"
         )
         plain = (
-            f"We parsed your forwarded email and added {count} segment(s) to Waypoint"
+            f"We parsed your forwarded email and added {count} segment(s) to Tripdex"
             + (f" ({trip_name})" if trip_name else "") + ":\n\n"
             + "\n".join(
                 "  - " + _fmt_segment_row(s).replace("&nbsp;", " ").replace("·", "|")
                 for s in segments_data
             )
-            + f"\n\nView your trip: {app_url}\n\n— Waypoint"
+            + f"\n\nView your trip: {app_url}\n\n— Tripdex"
         )
-        footnote = "Questions or corrections? Reply to this email or edit directly in Waypoint."
+        footnote = "Questions or corrections? Reply to this email or edit directly in Tripdex."
 
     elif status == "no_segments":
         heading = "We couldn\u2019t find any travel details"
@@ -289,7 +289,7 @@ def send_ingest_reply(to: str, status: str, subject: str,
         plain = (
             "We received your forwarded email but couldn't extract any travel segments.\n\n"
             "You can add segments manually in the app, or try forwarding a plain-text version.\n\n"
-            f"Open Waypoint: {app_url}\n\n\u2014 Waypoint"
+            f"Open Tripdex: {app_url}\n\n\u2014 Tripdex"
         )
         footnote = "If this keeps happening, reply to this email and we\u2019ll take a look."
 
@@ -300,14 +300,14 @@ def send_ingest_reply(to: str, status: str, subject: str,
             "We parsed your email but couldn\u2019t find a matching trip in your account."
             "</p>"
             '<p style="margin:0;font-size:15px;color:#4a4540;line-height:1.7;">'
-            "Open Waypoint to create a trip first, then forward the email again \u2014 "
+            "Open Tripdex to create a trip first, then forward the email again \u2014 "
             "or add the segment manually."
             "</p>"
         )
         plain = (
             "We parsed your email but couldn't find a matching trip in your account.\n\n"
-            "Create a trip in Waypoint first, then forward the email again.\n\n"
-            f"Open Waypoint: {app_url}\n\n\u2014 Waypoint"
+            "Create a trip in Tripdex first, then forward the email again.\n\n"
+            f"Open Tripdex: {app_url}\n\n\u2014 Tripdex"
         )
         footnote = "Need help? Reply to this email."
 
@@ -324,7 +324,7 @@ def send_ingest_reply(to: str, status: str, subject: str,
         plain = (
             "We received your email but ran into a problem processing it.\n\n"
             "Please try forwarding it again, or add your travel details manually.\n\n"
-            f"Open Waypoint: {app_url}\n\n\u2014 Waypoint"
+            f"Open Tripdex: {app_url}\n\n\u2014 Tripdex"
         )
         footnote = "If this keeps happening, reply to this email and we\u2019ll investigate."
 
@@ -332,22 +332,22 @@ def send_ingest_reply(to: str, status: str, subject: str,
         heading=heading,
         body_html=body_html,
         cta_url=app_url,
-        cta_label="Open Waypoint",
+        cta_label="Open Tripdex",
         footnote=footnote,
     )
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = reply_subject
-        msg["From"]    = f"Waypoint <{FROM_EMAIL}>"
+        msg["From"]    = f"Tripdex <{FROM_EMAIL}>"
         msg["To"]      = to
-        msg["Reply-To"] = "Waypoint <waypoint@emdm.ch>"
+        msg["Reply-To"] = "Tripdex <tripdex@emdm.ch>"
         msg.attach(MIMEText(plain, "plain"))
         msg.attach(MIMEText(html, "html"))
         with smtplib.SMTP("localhost") as s:
             s.sendmail(FROM_EMAIL, [to], msg.as_string())
     except Exception as e:
         import logging
-        logging.getLogger("waypoint").warning(f"Could not send ingest reply to {to}: {e}")
+        logging.getLogger("tripdex").warning(f"Could not send ingest reply to {to}: {e}")
 
 
 
@@ -356,27 +356,27 @@ def send_unregistered_reply(to: str):
     """Send a branded reply when sender is not a registered user."""
     register_url = FRONTEND_URL
     profile_url  = f"{FRONTEND_URL}#profile"
-    subject = "Waypoint — we don't recognise this email address"
+    subject = "Tripdex — we don't recognise this email address"
     body_text = (
         f"Hi,\n\n"
-        f"We received your forwarded email but couldn't match {to} to a Waypoint account.\n\n"
+        f"We received your forwarded email but couldn't match {to} to a Tripdex account.\n\n"
         f"There are two ways to fix this:\n"
-        f"1. Create a new Waypoint account using this email address:\n   {register_url}\n\n"
+        f"1. Create a new Tripdex account using this email address:\n   {register_url}\n\n"
         f"2. Already have an account? Add {to} as a source email in your Profile:\n   {profile_url}\n\n"
-        f"Once set up, forward your travel confirmation emails to waypoint@emdm.ch "
+        f"Once set up, forward your travel confirmation emails to tripdex@emdm.ch "
         f"and we'll build your itinerary automatically.\n\n"
-        f"— Waypoint"
+        f"— Tripdex"
     )
     body_html = (
         "<p style=\"margin:0 0 12px;font-size:15px;color:#4a4540;line-height:1.7;\">"
-        "  We received your forwarded email but couldn&#39;t find a Waypoint account"
+        "  We received your forwarded email but couldn&#39;t find a Tripdex account"
         f" registered to <strong style=\"color:#1a1814\">{to}</strong>."
         "</p>"
         "<p style=\"margin:0 0 12px;font-size:15px;color:#4a4540;line-height:1.7;\">"
         "  There are two ways to fix this:"
         "</p>"
         "<ul style=\"margin:0 0 16px;padding-left:20px;font-size:14px;color:#4a4540;line-height:1.8;\">"
-        "  <li><strong>New to Waypoint?</strong> Create a free account — use this exact email address when you register.</li>"
+        "  <li><strong>New to Tripdex?</strong> Create a free account — use this exact email address when you register.</li>"
         f"  <li><strong>Already have an account?</strong> Log in and add <em>{to}</em> as a source email in your Profile.</li>"
         "</ul>"
     )
@@ -385,17 +385,17 @@ def send_unregistered_reply(to: str):
         body_html=body_html,
         cta_url=register_url,
         cta_label="Create your account",
-        footnote="You're receiving this because someone forwarded a travel confirmation from this address to waypoint@emdm.ch."
+        footnote="You're receiving this because someone forwarded a travel confirmation from this address to tripdex@emdm.ch."
     )
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"]    = f"Waypoint <{FROM_EMAIL}>"
+        msg["From"]    = f"Tripdex <{FROM_EMAIL}>"
         msg["To"]      = to
         msg.attach(MIMEText(body_text, "plain"))
         msg.attach(MIMEText(html, "html"))
         with smtplib.SMTP("localhost") as s:
             s.sendmail(FROM_EMAIL, [to], msg.as_string())
     except Exception as e:
-        import logging; logging.getLogger("waypoint").warning(f"Could not send unregistered reply: {e}")
+        import logging; logging.getLogger("tripdex").warning(f"Could not send unregistered reply: {e}")
 

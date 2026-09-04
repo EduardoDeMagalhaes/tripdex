@@ -1,4 +1,4 @@
-# Waypoint
+# Tripdex
 
 A lightweight personal travel itinerary tool.
 
@@ -15,4 +15,4 @@ A lightweight personal travel itinerary tool.
 - **Infra:** Ubuntu 24.04, Nginx, Let's Encrypt
 
 ## Live
-https://waypoint.emdm.ch
+https://tripdex.emdm.ch

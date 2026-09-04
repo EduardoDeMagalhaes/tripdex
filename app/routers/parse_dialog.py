@@ -174,7 +174,7 @@ async def parse_dialog(body: DialogRequest, db: Session = Depends(get_db), user:
         gpt["question"] = (
             "I\'ve asked a few times and I\'m still not sure I understand what you need. "
             "This might be something I can\'t handle yet — or a bug. "
-            "Would you like to report it so we can improve Waypoint?"
+            "Would you like to report it so we can improve Tripdex?"
         )
 
     if status=='ready' and draft.get('type')=='flight' and draft.get('flight_iata'):
@@ -244,7 +244,7 @@ import os as _os
 
 _dialog_log_path = _os.path.join(_os.path.dirname(__file__), "../../logs/dialog.log")
 _os.makedirs(_os.path.dirname(_dialog_log_path), exist_ok=True)
-_dlog = logging.getLogger("waypoint.dialog")
+_dlog = logging.getLogger("tripdex.dialog")
 if not _dlog.handlers:
     _h = _lh.RotatingFileHandler(
         _dialog_log_path, maxBytes=10*1024*1024, backupCount=2, encoding="utf-8"

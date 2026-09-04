@@ -8,7 +8,7 @@ from app.routers.deps import get_current_user
 import asyncio
 import logging
 
-log = logging.getLogger("waypoint.segments")
+log = logging.getLogger("tripdex.segments")
 
 _last_enrich_time = 0.0
 

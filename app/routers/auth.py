@@ -114,7 +114,7 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     db.execute(text("UPDATE users SET is_verified=1, updated_at=:now WHERE id=:uid"), {"now": now, "uid": row["user_id"]})
     db.commit()
 
-    return _verify_page("Email confirmed ✦", "Your account is active. You can now log in to Waypoint.", success=True)
+    return _verify_page("Email confirmed ✦", "Your account is active. You can now log in to Tripdex.", success=True)
 
 
 def _verify_page(title: str, message: str, success: bool) -> str:
@@ -130,7 +130,7 @@ a{{display:inline-block;padding:12px 28px;background:{color};color:#fff;
 border-radius:8px;text-decoration:none;font-weight:bold}}</style></head>
 <body><div class="card">
   <h2>{title}</h2><p>{message}</p>
-  <a href="{login_url}">Go to Waypoint</a>
+  <a href="{login_url}">Go to Tripdex</a>
 </div></body></html>"""
 
 

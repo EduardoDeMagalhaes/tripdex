@@ -18,3 +18,4 @@ venv.failed-*
 *.bak.*
 *.db.bak*
 logs/service.log
+.review-backups/

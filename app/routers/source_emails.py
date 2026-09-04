@@ -58,17 +58,17 @@ def _issue_token(db: Session, user_id: str, source_email_id: str) -> str:
 
 def _send_verification(to: str, token: str):
     link = f"{FRONTEND_URL}/api/source-emails/verify?token={token}"
-    subject = "Confirm your Waypoint source email"
+    subject = "Confirm your Tripdex source email"
     text_body = (
         f"Hi,\n\n"
-        f"Someone requested to add {to} as a source email on a Waypoint account.\n\n"
+        f"Someone requested to add {to} as a source email on a Tripdex account.\n\n"
         f"Click the link below to confirm (expires in {TOKEN_TTL_HOURS} hours):\n{link}\n\n"
-        f"If you didn't request this, ignore this email.\n\n— Waypoint"
+        f"If you didn't request this, ignore this email.\n\n— Tripdex"
     )
     body_html = (
         f"<p style=\"margin:0 0 12px;font-size:15px;color:#4a4540;line-height:1.7;\">"
         f"Someone requested to add <strong style=\"color:#1a1814\">{to}</strong> as a source "
-        f"email address on a Waypoint account."
+        f"email address on a Tripdex account."
         f"</p>"
         f"<p style=\"margin:0;font-size:15px;color:#4a4540;line-height:1.7;\">"
         f"Click below to confirm. The link expires in {TOKEN_TTL_HOURS} hours."
@@ -139,14 +139,14 @@ def add_source_email(body: AddSourceEmailBody, db: Session = Depends(get_db), us
         "SELECT id FROM user_source_emails WHERE LOWER(email)=:email AND status='confirmed'"
     ), {"email": addr}).fetchone()
     if existing_confirmed:
-        raise HTTPException(409, "This email address is already linked to a Waypoint account.")
+        raise HTTPException(409, "This email address is already linked to a Tripdex account.")
 
     # Block if it's someone's primary account email (confirmed)
     primary = db.execute(text(
         "SELECT id FROM users WHERE LOWER(email)=:email AND is_verified=1"
     ), {"email": addr}).fetchone()
     if primary:
-        raise HTTPException(409, "This email address is already linked to a Waypoint account.")
+        raise HTTPException(409, "This email address is already linked to a Tripdex account.")
 
     # Block duplicate pending for THIS user
     existing_mine = db.execute(text(
@@ -177,7 +177,7 @@ def add_source_email(body: AddSourceEmailBody, db: Session = Depends(get_db), us
     try:
         _send_verification(addr, tok)
     except Exception as e:
-        import logging; logging.getLogger("waypoint").warning(f"Could not send source email verification to {addr}: {e}")
+        import logging; logging.getLogger("tripdex").warning(f"Could not send source email verification to {addr}: {e}")
 
     return {"ok": True, "id": se_id, "email": addr, "status": "pending"}
 
@@ -212,7 +212,7 @@ def resend_verification(se_id: str, db: Session = Depends(get_db), user: dict = 
     try:
         _send_verification(row["email"], tok)
     except Exception as e:
-        import logging; logging.getLogger("waypoint").warning(f"Resend failed for {row['email']}: {e}")
+        import logging; logging.getLogger("tripdex").warning(f"Resend failed for {row['email']}: {e}")
         raise HTTPException(500, "Could not send verification email.")
 
     return {"ok": True}
@@ -238,7 +238,7 @@ a{{display:inline-block;background:#b5651d;color:#fff;padding:12px 24px;border-r
 text-decoration:none;font-size:15px}}</style></head>
 <body><div class="card"><div style="font-size:32px;margin-bottom:16px">✦</div>
 <h2 style="color:{color}">{title}</h2><p>{msg}</p>
-<a href="{FRONTEND_URL}">Open Waypoint</a></div></body></html>"""
+<a href="{FRONTEND_URL}">Open Tripdex</a></div></body></html>"""
 
     if not row:
         return _page("Invalid or expired link",
@@ -277,4 +277,4 @@ text-decoration:none;font-size:15px}}</style></head>
 
     email_addr = se["email"]
     return _page("Email confirmed ✓",
-                 f"{email_addr} has been added to your Waypoint account. You can now forward travel emails from this address.")
+                 f"{email_addr} has been added to your Tripdex account. You can now forward travel emails from this address.")

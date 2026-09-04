@@ -130,11 +130,11 @@ def _send_feedback_email(fb_id, short_id, fb_type, title, description, context,
         f"{description or 'No description'}\n\n"
         f"--- TRIAGE WITH CLAUDE ---\n"
         f"Paste this into a new chat:\n\n"
-        f"I have a Waypoint feedback report I'd like to triage with you.\n"
+        f"I have a Tripdex feedback report I'd like to triage with you.\n"
         f"Report ID: {short_id}\n\n"
         f"Please:\n"
         f"1. Connect to emdm.ch via SSH MCP\n"
-        f"2. Pull the report: SELECT * FROM feedback WHERE short_id='{short_id}' in /home/eduardo/waypoint/waypoint.db\n"
+        f"2. Pull the report: SELECT * FROM feedback WHERE short_id='{short_id}' in /home/eduardo/waypoint/tripdex.db\n"
         f"3. Read the backlog at /home/eduardo/waypoint/BACKLOG.md\n"
         f"4. Compare and recommend: ignore / amend / new backlog item + priority"
     )
@@ -145,11 +145,11 @@ def _send_feedback_email(fb_id, short_id, fb_type, title, description, context,
     from app.routers.email_templates import _email_template
 
     triage_prompt = (
-        f"I have a Waypoint feedback report I'd like to triage with you.\n\n"
+        f"I have a Tripdex feedback report I'd like to triage with you.\n\n"
         f"Report ID: **{short_id}**\n\n"
         f"Please:\n"
         f"1. Connect to the emdm.ch server via SSH MCP\n"
-        f"2. Run: `python3 -c \"import sqlite3; con=sqlite3.connect('/home/eduardo/waypoint/waypoint.db'); "
+        f"2. Run: `python3 -c \"import sqlite3; con=sqlite3.connect('/home/eduardo/waypoint/tripdex.db'); "
         f"row=con.execute(\'SELECT short_id,type,title,description,context,status,created_at,username FROM feedback WHERE short_id=\'\'{short_id}\'\'\').fetchone(); "
         f"print(row); con.close()\"` \n"
         f"3. Read the current backlog at `/home/eduardo/waypoint/BACKLOG.md`\n"
@@ -172,13 +172,13 @@ def _send_feedback_email(fb_id, short_id, fb_type, title, description, context,
         heading=f"{short_id} — {title}",
         body_html=body_html + triage_block,
         cta_url=FRONTEND_URL,
-        cta_label="Open Waypoint",
-        footnote="This is an automated notification from Waypoint feedback."
+        cta_label="Open Tripdex",
+        footnote="This is an automated notification from Tripdex feedback."
     )
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"[Waypoint] {short_id} {type_label}: {title}"
-        msg["From"]    = f"Waypoint <{FROM_EMAIL}>"
+        msg["Subject"] = f"[Tripdex] {short_id} {type_label}: {title}"
+        msg["From"]    = f"Tripdex <{FROM_EMAIL}>"
         msg["To"]      = ADMIN_EMAIL
         msg.attach(MIMEText(plain, "plain"))
         msg.attach(MIMEText(html, "html"))
@@ -186,4 +186,4 @@ def _send_feedback_email(fb_id, short_id, fb_type, title, description, context,
             s.sendmail(FROM_EMAIL, [ADMIN_EMAIL], msg.as_string())
     except Exception as e:
         import logging
-        logging.getLogger("waypoint").warning(f"Could not send feedback email: {e}")
+        logging.getLogger("tripdex").warning(f"Could not send feedback email: {e}")

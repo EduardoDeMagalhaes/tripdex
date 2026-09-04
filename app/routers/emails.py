@@ -143,7 +143,7 @@ def _geocode_iata_or_city(name: str) -> tuple[float,float] | None:
     q = name.strip()
     url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(q)}&format=json&limit=1&accept-language=en"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Waypoint/1.0 trip.helper@emdm.ch"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Tripdex/1.0 trip.helper@emdm.ch"})
         with urllib.request.urlopen(req, timeout=4) as r:
             data = json.loads(r.read())
         if data:
@@ -511,7 +511,7 @@ a{{display:inline-block;background:#b5651d;color:#fff;padding:12px 24px;border-r
 </head><body><div class="card">
 <div style="font-size:32px;margin-bottom:16px">✦</div>
 <h2>{title}</h2><p>{msg}</p>
-<a href="{FRONTEND_URL}">Open Waypoint</a>
+<a href="{FRONTEND_URL}">Open Tripdex</a>
 </div></body></html>""")
 
 
@@ -567,8 +567,8 @@ a{{display:inline-block;background:#b5651d;color:#fff;padding:12px 24px;border-r
 </head><body><div class="card">
 <div style="font-size:32px;margin-bottom:16px">✦</div>
 <h2>Added to {trip_obj.name}</h2>
-<p>Your segments have been assigned. Open Waypoint to see your itinerary.</p>
-<a href="{FRONTEND_URL}">Open Waypoint</a>
+<p>Your segments have been assigned. Open Tripdex to see your itinerary.</p>
+<a href="{FRONTEND_URL}">Open Tripdex</a>
 </div></body></html>"""
     return HTMLResponse(html)
 
@@ -660,7 +660,7 @@ def ingest_email(body: IngestRequest, bg: BackgroundTasks, db: Session = Depends
         # scheduling, etc.) must still notify the sender — don't let a bug produce
         # silence. Roll back the half-done work, log a fresh failed RawEmail, reply.
         import logging
-        logging.getLogger("waypoint").error(f"Unhandled ingest error for {body.message_id}: {e}", exc_info=True)
+        logging.getLogger("tripdex").error(f"Unhandled ingest error for {body.message_id}: {e}", exc_info=True)
         db.rollback()
         raw_failed = RawEmail(
             message_id=body.message_id, from_address=body.from_address,

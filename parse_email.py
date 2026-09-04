@@ -41,7 +41,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
 )
-log = logging.getLogger("waypoint-email")
+log = logging.getLogger("tripdex-email")
 
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
@@ -79,7 +79,7 @@ def extract_images(msg: email.message.Message) -> list[str]:
     """
     Extract image attachments (jpg/png/webp/gif + HEIC/HEIF converted to jpeg) as a
     list of data-URI strings ('data:image/jpeg;base64,...'), capped at MAX_IMAGES.
-    Inline images referenced only via Content-ID are still picked up — Waypoint
+    Inline images referenced only via Content-ID are still picked up — Tripdex
     doesn't need to distinguish inline vs attached, just "is there a picture here".
     """
     images: list[str] = []
@@ -163,7 +163,7 @@ def extract_body(msg: email.message.Message) -> tuple[str, list[str]]:
 
 
 def call_ingest_api(payload: dict) -> dict:
-    """POST to the Waypoint ingest endpoint."""
+    """POST to the Tripdex ingest endpoint."""
     data    = json.dumps(payload).encode("utf-8")
     headers = {
         "Content-Type": "application/json",
@@ -195,7 +195,7 @@ def main():
 
     if not message_id:
         import hashlib, time
-        message_id = f"<generated-{hashlib.md5(raw_email).hexdigest()}@waypoint>"
+        message_id = f"<generated-{hashlib.md5(raw_email).hexdigest()}@tripdex>"
 
     log.info(f"Processing: message_id={message_id} from={from_address} subject={subject}")
 

@@ -1,5 +1,5 @@
 """
-guardrails.py — Pre-GPT checks for the Waypoint dialog endpoint.
+guardrails.py — Pre-GPT checks for the Tripdex dialog endpoint.
 
 Each guardrail is a function with signature:
     check_*(message, draft, trip, all_trips) -> GuardrailHit | None

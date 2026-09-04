@@ -1,8 +1,8 @@
-# Waypoint — Project Backlog & Context
+# Tripdex — Project Backlog & Context
 
 ## Development workflow
-- **All new features go to test first** (`test.waypoint.emdm.ch`, port 8001, service: `waypoint-test`)
-- Eduardo tests and approves → then promote to live (`waypoint.emdm.ch`, port 8000, service: `waypoint`)
+- **All new features go to test first** (`test.tripdex.emdm.ch`, port 8001, service: `waypoint-test`)
+- Eduardo tests and approves → then promote to live (`tripdex.emdm.ch`, port 8000, service: `waypoint`)
 - Never implement new features directly on live
 - This rule applies to all emdm.ch projects
 
@@ -17,7 +17,7 @@
 
 ## Architecture notes
 - Segments auto-enriched after every save (trains via transport.opendata.ch, flights via AviationStack/AeroDataBox)
-- Email ingest: forward to `waypoint@emdm.ch` → parsed by GPT-4o → segments created
+- Email ingest: forward to `tripdex@emdm.ch` → parsed by GPT-4o → segments created
 - Connection search routing: Swiss/cross-border → transport.opendata.ch | German → DB Vendo (Docker, port 3000) | Austrian/Italian → v6.oebb.transport.rest
 - Auth: session cookies + bcrypt
 - Frontend: vanilla JS, single `static/index.html`
