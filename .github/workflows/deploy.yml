@@ -15,7 +15,7 @@ jobs:
           username: eduardo
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            cd /home/eduardo/waypoint
+            cd /home/eduardo/tripdex
             git pull origin main
-            sudo systemctl restart waypoint
+            sudo systemctl restart tripdex
             echo "Deployed at $(date)"
